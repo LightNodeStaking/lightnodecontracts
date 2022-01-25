@@ -1,0 +1,111 @@
+{
+  "contractName": "Staking",
+  "abi": [],
+  "metadata": "{\"compiler\":{\"version\":\"0.8.0+commit.c7dfd78e\"},\"language\":\"Solidity\",\"output\":{\"abi\":[],\"devdoc\":{\"kind\":\"dev\",\"methods\":{},\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{},\"version\":1}},\"settings\":{\"compilationTarget\":{\"/mnt/c/pr0/lightNodeContracts/contracts/Staking.sol\":\"Staking\"},\"evmVersion\":\"istanbul\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\"},\"optimizer\":{\"enabled\":false,\"runs\":200},\"remappings\":[]},\"sources\":{\"/mnt/c/pr0/lightNodeContracts/contracts/Staking.sol\":{\"keccak256\":\"0xe50706f0de5ac7ebfd80def0e4d9f7e8b3341eda83f03ee1d8cd1675a0ffcb32\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://9de0bde0ff282dde76e64bdd6cd342aa78822f204576a0daf54b219e0a8bda0f\",\"dweb:/ipfs/QmXB2nMQwZGtWzK7N13fx1rNsBVsXFufHzco3rfwEseBK2\"]}},\"version\":1}",
+  "bytecode": "0x6080604052348015600f57600080fd5b50603f80601d6000396000f3fe6080604052600080fdfea2646970667358221220528b75f486f31dfd5a84830ef21cff2f338fe2ac14b07eeb821aeb1291dcc64464736f6c63430008000033",
+  "deployedBytecode": "0x6080604052600080fdfea2646970667358221220528b75f486f31dfd5a84830ef21cff2f338fe2ac14b07eeb821aeb1291dcc64464736f6c63430008000033",
+  "immutableReferences": {},
+  "sourceMap": "60:26:1:-:0;;;;;;;;;;;;;;;;;;;",
+  "deployedSourceMap": "60:26:1:-:0;;;;;",
+  "source": "// SPDX-License-Identifier: MIT\r\npragma solidity ^0.8.0;\r\n\r\ncontract Staking{\r\n    \r\n}",
+  "sourcePath": "/mnt/c/pr0/lightNodeContracts/contracts/Staking.sol",
+  "ast": {
+    "absolutePath": "/mnt/c/pr0/lightNodeContracts/contracts/Staking.sol",
+    "exportedSymbols": {
+      "Staking": [
+        35
+      ]
+    },
+    "id": 36,
+    "license": "MIT",
+    "nodeType": "SourceUnit",
+    "nodes": [
+      {
+        "id": 34,
+        "literals": [
+          "solidity",
+          "^",
+          "0.8",
+          ".0"
+        ],
+        "nodeType": "PragmaDirective",
+        "src": "33:23:1"
+      },
+      {
+        "abstract": false,
+        "baseContracts": [],
+        "contractDependencies": [],
+        "contractKind": "contract",
+        "fullyImplemented": true,
+        "id": 35,
+        "linearizedBaseContracts": [
+          35
+        ],
+        "name": "Staking",
+        "nodeType": "ContractDefinition",
+        "nodes": [],
+        "scope": 36,
+        "src": "60:26:1"
+      }
+    ],
+    "src": "33:53:1"
+  },
+  "legacyAST": {
+    "absolutePath": "/mnt/c/pr0/lightNodeContracts/contracts/Staking.sol",
+    "exportedSymbols": {
+      "Staking": [
+        35
+      ]
+    },
+    "id": 36,
+    "license": "MIT",
+    "nodeType": "SourceUnit",
+    "nodes": [
+      {
+        "id": 34,
+        "literals": [
+          "solidity",
+          "^",
+          "0.8",
+          ".0"
+        ],
+        "nodeType": "PragmaDirective",
+        "src": "33:23:1"
+      },
+      {
+        "abstract": false,
+        "baseContracts": [],
+        "contractDependencies": [],
+        "contractKind": "contract",
+        "fullyImplemented": true,
+        "id": 35,
+        "linearizedBaseContracts": [
+          35
+        ],
+        "name": "Staking",
+        "nodeType": "ContractDefinition",
+        "nodes": [],
+        "scope": 36,
+        "src": "60:26:1"
+      }
+    ],
+    "src": "33:53:1"
+  },
+  "compiler": {
+    "name": "solc",
+    "version": "0.8.0+commit.c7dfd78e.Emscripten.clang"
+  },
+  "networks": {},
+  "schemaVersion": "3.2.5",
+  "updatedAt": "2022-01-25T02:30:11.828Z",
+  "devdoc": {
+    "kind": "dev",
+    "methods": {},
+    "version": 1
+  },
+  "userdoc": {
+    "kind": "user",
+    "methods": {},
+    "version": 1
+  }
+}
