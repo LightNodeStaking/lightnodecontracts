@@ -6,6 +6,8 @@ import "./SLETH.sol";
 contract Staking{
     
     address public owner;
+    uint256 public fee = 75; //7.5% fees
+    uint265 private totalReward;
     address constant ETHER = address(0);
     SLETH public slETH;
     
@@ -14,7 +16,8 @@ contract Staking{
     mapping(address => mapping(address=> uint256)) public stakingBalance;
     uint256 public stakedAmount;
     mapping(address => uint256) public rewardBalance;
-    mapping(address => bool) public  isStaking;
+    mapping(address => bool) public isStaking;
+    mapping(address => bool) public hasStaked;
     
     //events
     event Stake(address indexed token, address indexed user, uint256 amount, uint256 balance);
@@ -33,12 +36,16 @@ contract Staking{
 
     function stakeETHER(address _token, uint256 _amount) payable public{
         require(_token == ETHER, "Invalid Token");
-        require(stakingBalance[_token][msg.sender]>= _amount, "Not enough Ether");
+        if(!hasStaked[msg.sender]){
+            stakers.push(msg.sender);
+        }
         stakingBalance[_token][msg.sender] = stakingBalance[_token][msg.sender]+(_amount);
-        isStaking[msg.sender] == true;
+        isStaking[msg.sender] = true;
+        hasStaked[msg.sender] = true;
         stakedAmount += _amount;
+        emit Stake(_token, msg.sender, _amount, stakingBalance[_token][msg.sender]);
         slETH.mint(msg.sender, _amount);
-        emit Stake(_token, msg.sender, _amount, stakingBalance[_token][msg.sender] );
+        emit TransferSeth(msg.sender, _amount, block.timestamp);
     }
 
     /*This is for users only. Users can call this function to withdraw their staked eth.
@@ -54,8 +61,25 @@ contract Staking{
     //     emit Withdraw(ETHER, msg.sender, _amount, stakingBalance[ETHER][msg.sender]); 
     // }
 
+    /*WithdrawEther can be only called by owner. This function will get only called if the total staked balance is equal
+      or more than discussed amount.
+    */
+    function setReward(uint256 _reward) public onlyOwner {
+            totalReward = _reward;
+        }
+
+    function rewards(address _user) public {
+        require(isStaking[_user]==true, "No staked Ether");
+        uint256 stakedEthByuser = stakingBalance[ETHER][_user];
+        uint256 rewardFee = (totalReward*fee)/1000;
+        uint256 netReward = totalReward-rewardFee;
+        uint256 allocationPerUser = (stakedEthByuser*100)/stakedAmount;
+        uint256 rewardPerUser = (allocationPerUser*netReward)/100;
+
+    }
+
     function withdrawEther(uint256 _amount) public onlyOwner{
-        payable(owner).transfer(_amount);
+        payable(msg.sender).transfer(_amount);
     }
 
     function balanceOf(address _user) public view returns (uint256){
@@ -65,4 +89,4 @@ contract Staking{
     function stillStaking() public view returns(bool){
         return isStaking[msg.sender];
     }
-}additiona
+}
