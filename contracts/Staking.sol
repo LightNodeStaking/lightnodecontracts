@@ -6,8 +6,9 @@ import "./SLETH.sol";
 contract Staking{
     
     address public owner;
+    address public devAddress;
     uint256 public fee = 75; //7.5% fees
-    uint265 private totalReward;
+    uint256 private totalReward;
     address constant ETHER = address(0);
     SLETH public slETH;
     
@@ -24,8 +25,9 @@ contract Staking{
     event TransferSeth(address indexed user, uint256 amount, uint timestamp);
     event Withdraw(address indexed token, address indexed user, uint256 amount, uint256 balance);
 
-    constructor( address _owner/*, SLETH _slETH*/ ){
+    constructor( address _owner, address _devAddress/*, SLETH _slETH*/ ){
         owner = _owner;
+        devAddress = _devAddress;
         //slETH = _slETH;
     }
 
@@ -68,14 +70,21 @@ contract Staking{
             totalReward = _reward;
         }
 
-    function rewards(address _user) public {
+    /* */
+
+    function rewards(address _user) internal returns(uint256) {
         require(isStaking[_user]==true, "No staked Ether");
         uint256 stakedEthByuser = stakingBalance[ETHER][_user];
         uint256 rewardFee = (totalReward*fee)/1000;
         uint256 netReward = totalReward-rewardFee;
         uint256 allocationPerUser = (stakedEthByuser*100)/stakedAmount;
-        uint256 rewardPerUser = (allocationPerUser*netReward)/100;
+        rewardBalance[_user] = (allocationPerUser*netReward)/100;
+        return rewardBalance[_user];
+    }
 
+    function claimReward() public{
+        uint256 rewardPerUser = rewards(msg.sender);
+        payable(msg.sender).transfer(rewardPerUser);
     }
 
     function withdrawEther(uint256 _amount) public onlyOwner{
