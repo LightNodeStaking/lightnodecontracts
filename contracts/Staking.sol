@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts//token/ERC20/ERC20.sol";
 import "./SLETH.sol";
 
 contract Staking{
@@ -22,9 +21,9 @@ contract Staking{
     event TransferSeth(address indexed user, uint256 amount, uint timestamp);
     event Withdraw(address indexed token, address indexed user, uint256 amount, uint256 balance);
 
-    constructor( address _owner, SLETH _slETH ){
+    constructor( address _owner/*, SLETH _slETH*/ ){
         owner = _owner;
-        slETH = _slETH;
+        //slETH = _slETH;
     }
 
     modifier onlyOwner {
@@ -34,6 +33,7 @@ contract Staking{
 
     function stakeETHER(address _token, uint256 _amount) payable public{
         require(_token == ETHER, "Invalid Token");
+        require(stakingBalance[_token][msg.sender]>= _amount, "Not enough Ether");
         stakingBalance[_token][msg.sender] = stakingBalance[_token][msg.sender]+(_amount);
         isStaking[msg.sender] == true;
         stakedAmount += _amount;
@@ -41,20 +41,28 @@ contract Staking{
         emit Stake(_token, msg.sender, _amount, stakingBalance[_token][msg.sender] );
     }
 
-    function userWithdraw(uint256 _amount) public {
-        require(isStaking[msg.sender] == true, "No Eth to withdraw");
-        require(stakingBalance[ETHER][msg.sender]>=_amount);
-        stakingBalance[ETHER][msg.sender] =stakingBalance[ETHER][msg.sender]-(_amount);
-        payable(msg.sender).transfer(_amount);
-        emit Withdraw(ETHER, msg.sender, _amount, stakingBalance[ETHER][msg.sender]); 
-
-    }
+    /*This is for users only. Users can call this function to withdraw their staked eth.
+      Commenting out this function for now. We would have to decide whether we want to give user slETH or just give them options to withdraw. 
+      We can not have both these options. Otherwise, user will be able to trade their slETH to eth and claim the eth they staked as well.
+    */
+    // function userWithdraw(uint256 _amount) public {
+    //     require(isStaking[msg.sender] == true, "No Eth to withdraw");
+    //     require(stakingBalance[ETHER][msg.sender]>=_amount);
+    //     stakingBalance[ETHER][msg.sender] =stakingBalance[ETHER][msg.sender]-(_amount);
+    //     payable(msg.sender).transfer(_amount);
+    //     isStaking[msg.sender] == false;
+    //     emit Withdraw(ETHER, msg.sender, _amount, stakingBalance[ETHER][msg.sender]); 
+    // }
 
     function withdrawEther(uint256 _amount) public onlyOwner{
-        payable(msg.sender).transfer(_amount);
+        payable(owner).transfer(_amount);
     }
-    
+
     function balanceOf(address _user) public view returns (uint256){
         return stakingBalance[ETHER][_user];
     }
-}
+
+    function stillStaking() public view returns(bool){
+        return isStaking[msg.sender];
+    }
+}additiona
