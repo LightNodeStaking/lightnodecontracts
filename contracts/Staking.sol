@@ -8,6 +8,7 @@ contract Staking{
     address public owner;
     address public devAddress;
     uint256 public fee = 75; //7.5% fees
+    uint256 private rewardFee;
     uint256 private totalReward;
     address constant ETHER = address(0);
     SLETH public slETH;
@@ -24,6 +25,7 @@ contract Staking{
     event Stake(address indexed token, address indexed user, uint256 amount, uint256 balance);
     event TransferSeth(address indexed user, uint256 amount, uint timestamp);
     event Withdraw(address indexed token, address indexed user, uint256 amount, uint256 balance);
+    event ClaimRewards(address indexed user, uint256 amount);
 
     constructor( address _owner, address _devAddress/*, SLETH _slETH*/ ){
         owner = _owner;
@@ -63,30 +65,42 @@ contract Staking{
     //     emit Withdraw(ETHER, msg.sender, _amount, stakingBalance[ETHER][msg.sender]); 
     // }
 
-    /*WithdrawEther can be only called by owner. This function will get only called if the total staked balance is equal
-      or more than discussed amount.
-    */
+    /* setReward will be called by the owner only once a day to update the total reward */
     function setReward(uint256 _reward) public onlyOwner {
             totalReward = _reward;
-        }
+    }
 
-    /* */
+    /* claimReward will be called by the user. We can set the condition where owner are not able to call this function.
+        further info is needed by the client*/
+    function claimReward() public{
+        require(isStaking[msg.sender]==true, "No staked Ether");
+        require(msg.sender == address(0), "Invalid address");
+        uint256 rewardPerUser = calculateRewards(msg.sender);
+        payable(msg.sender).transfer(rewardPerUser);
+        emit ClaimRewards(msg.sender, rewardPerUser);
 
-    function rewards(address _user) internal returns(uint256) {
-        require(isStaking[_user]==true, "No staked Ether");
+    }
+
+    /* calculateRewards will calculate the user reward based on eth satked by the user/ total staked eth. */
+    function calculateRewards(address _user) internal returns(uint256) {
         uint256 stakedEthByuser = stakingBalance[ETHER][_user];
-        uint256 rewardFee = (totalReward*fee)/1000;
+        rewardFee = (totalReward*fee)/1000;
         uint256 netReward = totalReward-rewardFee;
         uint256 allocationPerUser = (stakedEthByuser*100)/stakedAmount;
         rewardBalance[_user] = (allocationPerUser*netReward)/100;
         return rewardBalance[_user];
     }
 
-    function claimReward() public{
-        uint256 rewardPerUser = rewards(msg.sender);
-        payable(msg.sender).transfer(rewardPerUser);
+    /* claimFee will be called by the owner only.
+       upon calling 7.5% reward fees will get transfered to dev address. Which we will set when depolying this contract  */
+    function claimFee() public onlyOwner {
+        require(rewardFee > 0, "No fee to claim");
+        payable(devAddress).transfer(rewardFee);
     }
 
+    /*WithdrawEther can be only called by owner. This function will get only called if the total staked balance is equal
+      or more than discussed amount.
+    */
     function withdrawEther(uint256 _amount) public onlyOwner{
         payable(msg.sender).transfer(_amount);
     }
