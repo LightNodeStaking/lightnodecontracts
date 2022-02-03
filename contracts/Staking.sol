@@ -48,7 +48,7 @@ contract Staking{
         hasStaked[msg.sender] = true;
         stakedAmount += _amount;
         emit Stake(_token, msg.sender, _amount, stakingBalance[_token][msg.sender]);
-        slETH.mint(msg.sender, _amount);
+        slETH._mint(msg.sender, _amount);
         emit TransferSeth(msg.sender, _amount, block.timestamp);
     }
 
