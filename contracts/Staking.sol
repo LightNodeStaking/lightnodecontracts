@@ -7,10 +7,11 @@ contract Staking{
     
     address public owner;
     address public devAddress;
-    uint256 public fee = 75; //7.5% fees
+    uint8 public fee = 75; //7.5% fees
     uint256 private rewardFee;
     uint256 private totalReward;
-    address constant ETHER = address(0);
+    address constant public ETHER = address(0);
+    uint256 constant public DEPOSIT_SIZE = 32 ether;
     SLETH public slETH;
     
     //storing stakers addresses
@@ -27,10 +28,10 @@ contract Staking{
     event Withdraw(address indexed token, address indexed user, uint256 amount, uint256 balance);
     event ClaimRewards(address indexed user, uint256 amount);
 
-    constructor( address _owner, address _devAddress/*, SLETH _slETH*/ ){
+    constructor( address _owner, address _devAddress, SLETH _slETH ){
         owner = _owner;
         devAddress = _devAddress;
-        //slETH = _slETH;
+        slETH = _slETH;
     }
 
     modifier onlyOwner {
@@ -38,18 +39,18 @@ contract Staking{
         _;
     }
 
-    function stakeETHER(address _token, uint256 _amount) payable public{
-        require(_token == ETHER, "Invalid Token");
+    function stakeETHER() payable public{
+        //require(_token == ETHER, "Only depoist ETH");
         if(!hasStaked[msg.sender]){
             stakers.push(msg.sender);
         }
-        stakingBalance[_token][msg.sender] = stakingBalance[_token][msg.sender]+(_amount);
+        stakingBalance[ETHER][msg.sender] = stakingBalance[ETHER][msg.sender]+(msg.value);
+        stakedAmount += msg.value;
         isStaking[msg.sender] = true;
         hasStaked[msg.sender] = true;
-        stakedAmount += _amount;
-        emit Stake(_token, msg.sender, _amount, stakingBalance[_token][msg.sender]);
-        slETH._mint(msg.sender, _amount);
-        emit TransferSeth(msg.sender, _amount, block.timestamp);
+        emit Stake(ETHER, msg.sender, msg.value, stakingBalance[ETHER][msg.sender]);
+        slETH._mint(msg.sender, msg.value);
+        emit TransferSeth(msg.sender, msg.value, block.timestamp);
     }
 
     /*This is for users only. Users can call this function to withdraw their staked eth.
