@@ -8,8 +8,8 @@ contract Staking{
     address public owner;
     address public devAddress;
     uint8 public fee = 75; //7.5% fees
-    uint256 private rewardFee;
-    uint256 private totalReward;
+    uint256 public rewardFee;
+    uint256 public totalReward;
     address constant public ETHER = address(0);
     uint256 constant public DEPOSIT_SIZE = 32 ether;
     SLETH public slETH;
@@ -24,7 +24,7 @@ contract Staking{
     
     //events
     event Stake(address indexed token, address indexed user, uint256 amount, uint256 balance);
-    event TransferSeth(address indexed user, uint256 amount, uint timestamp);
+    event TransferSleth(address indexed user, uint256 amount, uint timestamp);
     event Withdraw(address indexed token, address indexed user, uint256 amount, uint256 balance);
     event ClaimRewards(address indexed user, uint256 amount);
 
@@ -40,7 +40,7 @@ contract Staking{
     }
 
     function stakeETHER() payable public{
-        //require(_token == ETHER, "Only depoist ETH");
+        require(msg.value > 0, "Amount cannot be zero");
         if(!hasStaked[msg.sender]){
             stakers.push(msg.sender);
         }
@@ -50,7 +50,7 @@ contract Staking{
         hasStaked[msg.sender] = true;
         emit Stake(ETHER, msg.sender, msg.value, stakingBalance[ETHER][msg.sender]);
         slETH._mint(msg.sender, msg.value);
-        emit TransferSeth(msg.sender, msg.value, block.timestamp);
+        emit TransferSleth(msg.sender, msg.value, block.timestamp);
     }
 
     /*This is for users only. Users can call this function to withdraw their staked eth.
@@ -83,7 +83,7 @@ contract Staking{
     }
 
     /* calculateRewards will calculate the user reward based on eth satked by the user/ total staked eth. */
-    function calculateRewards(address _user) internal returns(uint256) {
+    function calculateRewards(address _user) public returns(uint256) {
         uint256 stakedEthByuser = stakingBalance[ETHER][_user];
         rewardFee = (totalReward*fee)/1000;
         uint256 netReward = totalReward-rewardFee;
@@ -98,6 +98,7 @@ contract Staking{
         require(rewardFee > 0, "No fee to claim");
         payable(devAddress).transfer(rewardFee);
     }
+    //change to escrow contract
 
     /*WithdrawEther can be only called by owner. This function will get only called if the total staked balance is equal
       or more than discussed amount.
