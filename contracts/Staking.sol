@@ -18,6 +18,7 @@ contract Staking{
     address[] public stakers;
     mapping(address => mapping(address=> uint256)) public stakingBalance;
     uint256 public stakedAmount;
+    mapping(address=>uint256) public feeByUser;
     mapping(address => uint256) public rewardBalance;
     mapping(address => bool) public isStaking;
     mapping(address => bool) public hasStaked;
@@ -85,10 +86,11 @@ contract Staking{
     /* calculateRewards will calculate the user reward based on eth satked by the user/ total staked eth. */
     function calculateRewards(address _user) public returns(uint256) {
         uint256 stakedEthByuser = stakingBalance[ETHER][_user];
-        rewardFee = (totalReward*fee)/1000;
-        uint256 netReward = totalReward-rewardFee;
         uint256 allocationPerUser = (stakedEthByuser*100)/stakedAmount;
-        rewardBalance[_user] = (allocationPerUser*netReward)/100;
+        uint256 reward = (allocationPerUser*totalReward)/100;
+        feeByUser[_user] = (reward*fee)/1000;
+        rewardBalance[_user] = reward - feeByUser[_user];
+        totalReward -= reward; 
         return rewardBalance[_user];
     }
 
