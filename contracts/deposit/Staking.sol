@@ -40,14 +40,18 @@ contract Staking is IStaking{
         require(msg.sender == owner);
         _;
     }
-
     modifier validAddress (address _address) {
-        require(_address != address(0));
+        require(msg.sender != address(0));
         _;
     }
 
-    function depositEth1() payable public{
-        require(msg.value > 0, "Amount cannot be zero");
+    modifier checkAmount (uint256 _amount) {
+        require(_amount > 0, "Invalid Input");
+        _;
+    }
+
+    function depositEth1() payable public checkAmount(msg.value){
+        //require(msg.value > 0, "Amount cannot be zero");
         if(!hasStaked[msg.sender]){
             stakers.push(msg.sender);
         }
@@ -80,9 +84,8 @@ contract Staking is IStaking{
 
     /* claimReward will be called by the user. We can set the condition where owner are not able to call this function.
         further info is needed by the client*/
-    function claimReward() public{
+    function claimReward() external validAddress(msg.sender){
         require(isStaking[msg.sender]==true, "No staked Ether");
-        require(msg.sender != address(0), "Invalid address");
         uint256 rewardPerUser = calculateRewards(msg.sender);
         payable(msg.sender).transfer(rewardPerUser);
         emit ClaimRewards(msg.sender, rewardPerUser);
@@ -90,7 +93,7 @@ contract Staking is IStaking{
     }
 
     /* calculateRewards will calculate the user reward based on eth satked by the user/ total staked eth. */
-    function calculateRewards(address _user) public returns(uint256) {
+    function calculateRewards(address _user) internal returns(uint256) {
         uint256 stakedEthByuser = stakingBalance[ETHER][_user];
         uint256 allocationPerUser = (stakedEthByuser/stakedAmount)*100;
         uint256 reward = (allocationPerUser*totalReward);
@@ -102,9 +105,10 @@ contract Staking is IStaking{
 
     /* claimFee will be called by the owner only.
        upon calling 7.5% reward fees will get transfered to dev address. Which we will set when depolying this contract  */
-    function claimFee() public onlyOwner {
-        require(rewardFee > 0, "No fee to claim");
-        payable(devAddress).transfer(rewardFee);
+    function claimFee( uint256 _amount) public onlyOwner checkAmount(_amount){
+        require(_amount<=rewardFee, "No fee to claim");
+        rewardFee -= _amount;
+        payable(devAddress).transfer(_amount);
     }
     //change to escrow contract
 
@@ -115,11 +119,11 @@ contract Staking is IStaking{
     //     payable(msg.sender).transfer(_amount);
     // }
 
-    function setNewOwner( address _newOwner) public onlyOwner validAddress(_newOwner) {
+    function setOwner( address _newOwner) public onlyOwner validAddress(_newOwner) {
         owner = _newOwner;
     }
 
-    function setNewDevAddress( address _newDevAddress) public onlyOwner validAddress(_newDevAddress){
+    function setDevAddress( address _newDevAddress) public onlyOwner validAddress(_newDevAddress){
         devAddress = _newDevAddress;
     }
 
