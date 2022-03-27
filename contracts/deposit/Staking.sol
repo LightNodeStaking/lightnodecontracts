@@ -3,9 +3,11 @@ pragma solidity ^0.8.0;
 
 import "../interfaces/IStaking.sol";
 import "../token/SLETH.sol";
+import "../lib/UnStructuredData.sol";
 
 contract Staking is IStaking{
-    
+    using UnStructuredData for bytes32;
+
     address public owner;
     address public devAddress;
     uint256 public fee = 75; //7.5% fees
@@ -51,7 +53,6 @@ contract Staking is IStaking{
     }
 
     function depositEth1() payable public checkAmount(msg.value){
-        //require(msg.value > 0, "Amount cannot be zero");
         if(!hasStaked[msg.sender]){
             stakers.push(msg.sender);
         }
