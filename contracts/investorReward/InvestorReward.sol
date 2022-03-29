@@ -89,6 +89,4 @@ contract InvestoReward {
             return messageAdmin;
         }
     }
-
-    function investor
 }
