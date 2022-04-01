@@ -24,7 +24,7 @@ interface INodeOperatords{
     function getNodeOperator(uint256 _id, bool _fullInfo) external view returns (
         bool active,
         string memory name,
-        address rewardAddress,
+        address rewardAddress, 
         uint64 stakingLimit,
         uint64 stoppedValidators,
         uint64 totalSigningKeys,
