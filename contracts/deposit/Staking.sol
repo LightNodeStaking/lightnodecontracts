@@ -50,7 +50,7 @@ contract Staking is IStaking{
         _;
     }
 
-    function depositEth1() payable public checkAmount(msg.value){
+    function depositEth1() payable override public checkAmount(msg.value){
         //require(msg.value > 0, "Amount cannot be zero");
         if(!hasStaked[msg.sender]){
             stakers.push(msg.sender);
@@ -119,19 +119,19 @@ contract Staking is IStaking{
     //     payable(msg.sender).transfer(_amount);
     // }
 
-    function setOwner( address _newOwner) public onlyOwner validAddress(_newOwner) {
+    function setOwner( address _newOwner) override public onlyOwner validAddress(_newOwner) {
         owner = _newOwner;
     }
 
-    function setDevAddress( address _newDevAddress) public onlyOwner validAddress(_newDevAddress){
+    function setDevAddress( address _newDevAddress) override public onlyOwner validAddress(_newDevAddress){
         devAddress = _newDevAddress;
     }
 
-    function balanceOf(address _user) public view returns (uint256){
+    function balanceOf(address _user) override public view returns (uint256){
         return stakingBalance[ETHER][_user];
     }
 
-    function stillStaking() public view returns(bool){
+    function stillStaking() override public view returns(bool){
         return isStaking[msg.sender];
     }
 }
