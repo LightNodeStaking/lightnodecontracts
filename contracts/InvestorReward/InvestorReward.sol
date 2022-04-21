@@ -16,6 +16,11 @@ contract InvestoReward {
     uint256 changePercentage;
     mapping(address => uint256) public investorPercentage;
 
+    event InvestorAdded(address investor, address owner);
+    event InvestorRemoved(address investor, address owner);
+    event AdminAdded(address admin, address owner);
+    event AdminRemoved(address admin, address owner);
+
     constructor(address admin) {
         admin = msg.sender;
     }
@@ -36,6 +41,7 @@ contract InvestoReward {
         } else if (isInvestor[_AddInvestor] = true) {
             return messageInvestor;
         }
+        emit InvestorAdded(_AddInvestor, msg.sender);
     }
 
     function removeInvestor(address _AddInvestor)
@@ -53,6 +59,7 @@ contract InvestoReward {
         } else if (isInvestor[_AddInvestor] = false) {
             return errorMessage;
         }
+        emit InvestorRemoved(_AddInvestor, msg.sender);
     }
 
     function addPercentage(address _investor) public returns (uint256) {
@@ -100,6 +107,7 @@ contract InvestoReward {
         } else if (isAdmin[_admin] = true) {
             return messageAdmin;
         }
+        emit AdminAdded(_admin, msg.sender);
     }
 
     function removeAdmin(address _admin)
@@ -117,5 +125,6 @@ contract InvestoReward {
         } else if (isAdmin[_admin] = false) {
             return messageAdmin;
         }
+        emit AdminRemoved(_admin, msg.sender);
     }
 }

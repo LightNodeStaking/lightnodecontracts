@@ -1,4 +1,4 @@
-?oB,J Awconst { expect } = require("chai");
+const { expect } = require("chai");
 const { ethers } = require("hardhat");
 const { expectRevert } = require('@openzeppelin/test-helpers');
 const Table = require("cli-table3");
@@ -9,7 +9,7 @@ describe("Admin/Investor Reward Testing", function () {
     //Table 
     table = new Table({
         head: ['Contracts', 'contract addresses'],
-        /colWidths: ['auto', 'auto']
+        colWidths: ['auto', 'auto']
     });
 
     testTable = new Table({
@@ -18,7 +18,7 @@ describe("Admin/Investor Reward Testing", function () {
     });
 
     beforeEach(async function () {
-        this.signers = await ethers.getSigners();
+        this.signers = await ethers.getSigners()
 
         this.admin1 = this.signers[0]
         this.admin2 = this.signers[1]
@@ -26,9 +26,9 @@ describe("Admin/Investor Reward Testing", function () {
         this.investor2 = this.signers[3]
 
         // deploying admin contract
-        this.AdminContract = await hre.ethers.getContractFactory("InvestoReward");
-        this.contractAddress = await this.AdminContract.deploy(this.admin1.address);
-        await this.contractAddress.deployed();
+        const AdminContract = await hre.ethers.getContractFactory("InvestoReward")
+        await AdminContract.deploy(this.admin1.address)
+
 
         //delpoying Sleth contract
         /* const SlEth = await hre.ethers.getContractFactory("SLETH");
@@ -37,8 +37,8 @@ describe("Admin/Investor Reward Testing", function () {
 
         //address shown
         table.push(
-            ["Admin Address is: ", this.admin1.address],
-            ["Admin contract deploy at: ", this.contractAddress.address],
+            ["Admin Address is: ", this.admin1],
+            ["Admin contract deploy at: ", this.contractAddress],
             /*["SlETH contarct deployed at: ", ContractAddress.address],
             ["SlETH Owner address: ", slETHOwner.address]*/
         )
@@ -46,13 +46,10 @@ describe("Admin/Investor Reward Testing", function () {
     it("Contracts deployment", async function () {
         console.log(table.toString());
     })
-zVI]
-    /*it("Add Investor - success ", async function () {
-        let success;
-        success = await contractAddress.addInvestor(investor);
-
-
-    })*/
+    it("Add Investor - success ", async function () {
+        /*let success;
+        success = await this.contractAddress.addInvestor(this.admin1);*/
+    })
 
     it("Add Investor - Failure", async function () {
 
