@@ -32,7 +32,7 @@ describe("Sleth's tests", function () {
         //deploying SLeth contract
         const SlEth = await hre.ethers.getContractFactory("SLETH");
         slEth = await SlEth.deploy(SlEthOwner.address);
-        await slEth.deployed();
+        //await slEth.deployed();
 
         //Transfering 10000 token to acc1
         await slEth.connect(SlEthOwner).transfer(acc1.address, "100000000000000000000000")

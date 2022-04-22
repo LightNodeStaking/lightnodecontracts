@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
+import "@openzeppelin/contracts/access/Ownable.sol";
 
-contract InvestoReward {
+contract InvestoReward is Ownable {
     //uint256 admin;
-    address[] public adminList;
+    address public admin;
     mapping(address => bool) public isAdmin;
     uint256 numberOfAdmin;
 
@@ -18,113 +19,63 @@ contract InvestoReward {
 
     event InvestorAdded(address investor, address owner);
     event InvestorRemoved(address investor, address owner);
-    event AdminAdded(address admin, address owner);
-    event AdminRemoved(address admin, address owner);
+    event AdminSet(address admin, address owner);
 
-    constructor(address admin) {
-        admin = msg.sender;
+    //event AdminRemoved(address admin, address owner);
+
+    constructor() {
+        admin == _msgSender();
     }
 
-    function addInvestor(address _AddInvestor)
+    function addInvestor(address addInvestor) public onlyOwner returns (bool) {
+        require(!isInvestor[addInvestor], "ALREADY_INVESTOR");
+        investors.push(addInvestor);
+        isInvestor[addInvestor] = true;
+        numberOfInvestor++;
+        emit InvestorAdded(addInvestor, msg.sender);
+        return true;
+    }
+
+    function removeInvestor(address addInvestor)
         public
-        returns (string memory messageInvestor)
+        onlyOwner
+        returns (bool)
     {
-        require(
-            isAdmin[msg.sender] == true,
-            "Only Admin can call this function"
-        );
-        messageInvestor = "The address is already an investor";
-        if (isInvestor[_AddInvestor] = false) {
-            investors.push(_AddInvestor);
-            isInvestor[_AddInvestor] = true;
-            numberOfInvestor++;
-        } else if (isInvestor[_AddInvestor] = true) {
-            return messageInvestor;
-        }
-        emit InvestorAdded(_AddInvestor, msg.sender);
+        require(isInvestor[addInvestor] == true, "ALREADY_REMOVED");
+        isInvestor[addInvestor] = false;
+        numberOfInvestor--;
+        emit InvestorRemoved(addInvestor, msg.sender);
+        return true;
     }
 
-    function removeInvestor(address _AddInvestor)
+    function addPercentage(address investor)
         public
-        returns (string memory errorMessage)
+        onlyOwner
+        returns (uint256)
     {
-        require(
-            isAdmin[msg.sender] == true,
-            "Only Admin can remove the investor"
-        );
-        errorMessage = "The address is not an investor, please check";
-        if (isInvestor[_AddInvestor] = true) {
-            isInvestor[_AddInvestor] = false;
-            numberOfInvestor--;
-        } else if (isInvestor[_AddInvestor] = false) {
-            return errorMessage;
-        }
-        emit InvestorRemoved(_AddInvestor, msg.sender);
-    }
-
-    function addPercentage(address _investor) public returns (uint256) {
-        require(
-            isAdmin[msg.sender] == true,
-            "Only Admin can add/edit the percentage"
-        );
-        require(
-            isInvestor[_investor] == true,
-            "the existing address is not an investor"
-        );
+        require(isInvestor[investor] == true, "NOT_INVESTOR");
         setPercentage = setPercentage / 1000;
-        investorPercentage[_investor] = setPercentage;
+        investorPercentage[investor] = setPercentage;
         return setPercentage;
     }
 
-    function editPercentage(address _investor) public returns (uint256) {
-        require(
-            isAdmin[msg.sender] == true,
-            "Only Admin can add/edit the percentage"
-        );
-        require(
-            isInvestor[_investor] == true,
-            "the existing address is not an investor"
-        );
+    function editPercentage(address investor)
+        public
+        onlyOwner
+        returns (uint256)
+    {
+        require(isInvestor[investor] == true, "NOT_INVESTOR");
         changePercentage = changePercentage / 1000;
-        investorPercentage[_investor] = changePercentage;
-
+        investorPercentage[investor] = changePercentage;
         return changePercentage;
     }
 
-    function addAdmin(address _admin)
-        public
-        returns (string memory messageAdmin)
-    {
-        require(
-            isAdmin[msg.sender] == true,
-            "Only Admin can call this function"
-        );
-        messageAdmin = "The address is already an admin";
-        if (isAdmin[_admin] = false) {
-            adminList.push(_admin);
-            isAdmin[_admin] = true;
-            numberOfAdmin++;
-        } else if (isAdmin[_admin] = true) {
-            return messageAdmin;
-        }
-        emit AdminAdded(_admin, msg.sender);
-    }
-
-    function removeAdmin(address _admin)
-        public
-        returns (string memory messageAdmin)
-    {
-        require(
-            isAdmin[msg.sender] == true,
-            "Only Admin can call this function"
-        );
-        messageAdmin = "This address does not exist in admin directory";
-        if (isAdmin[_admin] = true) {
-            isAdmin[_admin] = false;
-            numberOfAdmin--;
-        } else if (isAdmin[_admin] = false) {
-            return messageAdmin;
-        }
-        emit AdminRemoved(_admin, msg.sender);
-    }
+    /*function SetAdmin(address newAdmin) public onlyOwner returns (bool) {
+        require(newAdmin != address(0), "ZERO_ADDRESS");
+        //adminList.push(newAdmin);
+        isAdmin[newAdmin] = true;
+        numberOfAdmin++;
+        emit AdminSet(newAdmin, msg.sender);
+        return true;
+    }*/
 }

@@ -4,7 +4,7 @@ const { expectRevert } = require('@openzeppelin/test-helpers');
 const Table = require("cli-table3");
 
 describe("Admin/Investor Reward Testing", function () {
-    let slETH, slETHOwner, contractAddress, admin1, admin2, investor1, investor2;
+    let owner, admin1, admin2, investor1, investor2;
 
     //Table 
     table = new Table({
@@ -18,27 +18,21 @@ describe("Admin/Investor Reward Testing", function () {
     });
 
     beforeEach(async function () {
-        this.signers = await ethers.getSigners()
-
-        this.admin1 = this.signers[0]
-        this.admin2 = this.signers[1]
-        this.investor1 = this.signers[2]
-        this.investor2 = this.signers[3]
+        [ownerAcc, adminAcc1, adminAcc2, investorAcc1, investorAcc2] = await ethers.getSigners();
 
         // deploying admin contract
-        const AdminContract = await hre.ethers.getContractFactory("InvestoReward")
-        await AdminContract.deploy(this.admin1.address)
-
+        const AdminContract = await hre.ethers.getContractFactory("InvestoReward");
+        owner = await AdminContract.connect(ownerAcc).deploy();
 
         //delpoying Sleth contract
         /* const SlEth = await hre.ethers.getContractFactory("SLETH");
          slETH = await SlEth.deploy(slETHOwner.address)
          await slETH.deployed();*/
 
-        //address shown
+        //address shown 
         table.push(
-            ["Admin Address is: ", this.admin1],
-            ["Admin contract deploy at: ", this.contractAddress],
+            ["Admin Address is: ", ownerAcc.address],
+            ["Admin contract deploy at: ", owner.address],
             /*["SlETH contarct deployed at: ", ContractAddress.address],
             ["SlETH Owner address: ", slETHOwner.address]*/
         )
@@ -47,8 +41,10 @@ describe("Admin/Investor Reward Testing", function () {
         console.log(table.toString());
     })
     it("Add Investor - success ", async function () {
-        /*let success;
-        success = await this.contractAddress.addInvestor(this.admin1);*/
+        let success;
+        await owner.connect(ownerAcc).addInvestor(owner.address);
+        // expectRevert(await owner.addInvestor(owner.address), "ALREADY_INVESTOR").to.be;
+
     })
 
     it("Add Investor - Failure", async function () {
