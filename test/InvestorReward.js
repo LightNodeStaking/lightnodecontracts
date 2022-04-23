@@ -4,7 +4,7 @@ const { expectRevert } = require('@openzeppelin/test-helpers');
 const Table = require("cli-table3");
 
 describe("Admin/Investor Reward Testing", function () {
-    let owner, admin1, admin2, investor1, investor2;
+    let investorReward;
 
     //Table 
     table = new Table({
@@ -18,36 +18,48 @@ describe("Admin/Investor Reward Testing", function () {
     });
 
     beforeEach(async function () {
-        [ownerAcc, adminAcc1, adminAcc2, investorAcc1, investorAcc2] = await ethers.getSigners();
+        [ownerAcc, investorAcc1, investorAcc2] = await ethers.getSigners();
 
         // deploying admin contract
         const AdminContract = await hre.ethers.getContractFactory("InvestoReward");
-        owner = await AdminContract.connect(ownerAcc).deploy();
-
-        //delpoying Sleth contract
-        /* const SlEth = await hre.ethers.getContractFactory("SLETH");
-         slETH = await SlEth.deploy(slETHOwner.address)
-         await slETH.deployed();*/
+        investorReward = await AdminContract.connect(ownerAcc).deploy();
 
         //address shown 
         table.push(
             ["Admin Address is: ", ownerAcc.address],
-            ["Admin contract deploy at: ", owner.address],
-            /*["SlETH contarct deployed at: ", ContractAddress.address],
-            ["SlETH Owner address: ", slETHOwner.address]*/
+            ["Admin contract deploy at: ", investorReward.address],
+            ["Investor1 address is: ", investorAcc1.address]
         )
     })
     it("Contracts deployment", async function () {
         console.log(table.toString());
     })
-    it("Add Investor - success ", async function () {
-        let success;
-        await owner.connect(ownerAcc).addInvestor(owner.address);
-        // expectRevert(await owner.addInvestor(owner.address), "ALREADY_INVESTOR").to.be;
+    it("Add/Remove Investor and Percentage", async function () {
+        await investorReward.connect(ownerAcc).addInvestor(investorAcc1.address);
+        await expectRevert.unspecified(investorReward.connect(ownerAcc).addInvestor(ownerAcc.address))
 
+        await expect(investorReward.connect(ownerAcc).removeInvestor(investorAcc1.address)).to.ok;
+        await expectRevert.unspecified(investorReward.connect(ownerAcc).removeInvestor(investorAcc2.address));
     })
 
-    it("Add Investor - Failure", async function () {
+    it('Add/edit Percentage ', async function () {
+        await investorReward.connect(ownerAcc).addInvestor(investorAcc1.address);
+        await expectRevert.unspecified(investorReward.connect(ownerAcc).addInvestor(ownerAcc.address));
 
+        //adding percentage for Investor 1
+        let percentage = '1';
+        await investorReward.connect(ownerAcc).addPercentage(investorAcc1.address, percentage);
+        console.log("Investor 1 Percentage is " + percentage + "%");
+        console.log("investor 1 = " + investorAcc1.address);
+        await expectRevert.unspecified(investorReward.connect(investorAcc1).addPercentage(investorAcc1.address, percentage));
+        await expect(investorReward.connect(investorAcc1).addPercentage(investorAcc1.address)).to.ok;
+
+        //changing percentage for Investor 1
+        percentage = '5';
+        await investorReward.connect(ownerAcc).editPercentage(investorAcc1.address, percentage);
+        console.log("Investor 1 Percentage is " + percentage + "%");
+        console.log("investor 1 = " + investorAcc1.address);
+        await expectRevert.unspecified(investorReward.connect(investorAcc1).editPercentage(investorAcc1.address, percentage));
+        await expect(investorReward.connect(investorAcc1).editPercentage(investorAcc1.address)).to.ok;
     })
 })
