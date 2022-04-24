@@ -4,11 +4,10 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/Context.sol";
 
-contract SLETH is Context, IERC20{
+contract SLETH is Context, IERC20 {
+    // string public name ="Lightnode staked Ether";
+    // string public symbol = "slETH";
 
-   // string public name ="Lightnode staked Ether";
-   // string public symbol = "slETH";  
-    
     mapping(address => uint256) public _balances;
 
     mapping(address => mapping(address => uint256)) private _allowances;
@@ -18,6 +17,7 @@ contract SLETH is Context, IERC20{
     string public _symbol = "slETH";
     uint8 public _decimal = 18;
     address public tokenAccount;
+
     //address public ownerAddy;
     //Events
     //event Transfer(address indexed from, address indexed to, uint256 value);
@@ -32,9 +32,9 @@ contract SLETH is Context, IERC20{
      * All two of these values are immutable: they can only be set once during
      * construction.
      */
-    constructor( address _owner) {
+    constructor(address _owner) {
         tokenAccount = _owner;
-        _totalSupply = 1000000*(10**_decimal);
+        _totalSupply = 1000000 * (10**_decimal);
         _balances[_owner] = _totalSupply;
     }
 
@@ -80,7 +80,13 @@ contract SLETH is Context, IERC20{
     /**
      * @dev See {IERC20-balanceOf}.
      */
-    function balanceOf(address account) public view virtual override returns (uint256) {
+    function balanceOf(address account)
+        public
+        view
+        virtual
+        override
+        returns (uint256)
+    {
         return _balances[account];
     }
 
@@ -92,8 +98,13 @@ contract SLETH is Context, IERC20{
      * - `recipient` cannot be the zero address.
      * - the caller must have a balance of at least `amount`.
      */
-    function transfer(address recipient, uint256 amount) public virtual override returns (bool) {
-        require(_balances[msg.sender]>=amount);
+    function transfer(address recipient, uint256 amount)
+        public
+        virtual
+        override
+        returns (bool)
+    {
+        require(_balances[msg.sender] >= amount);
         _transfer(_msgSender(), recipient, amount);
         return true;
     }
@@ -101,7 +112,13 @@ contract SLETH is Context, IERC20{
     /**
      * @dev See {IERC20-allowance}.
      */
-    function allowance(address owner, address spender) public view virtual override returns (uint256) {
+    function allowance(address owner, address spender)
+        public
+        view
+        virtual
+        override
+        returns (uint256)
+    {
         return _allowances[owner][spender];
     }
 
@@ -115,7 +132,12 @@ contract SLETH is Context, IERC20{
      *
      * - `spender` cannot be the zero address.
      */
-    function approve(address spender, uint256 amount) public virtual override returns (bool) {
+    function approve(address spender, uint256 amount)
+        public
+        virtual
+        override
+        returns (bool)
+    {
         _approve(_msgSender(), spender, amount);
         return true;
     }
@@ -136,10 +158,17 @@ contract SLETH is Context, IERC20{
      * - the caller must have allowance for ``sender``'s tokens of at least
      * `amount`.
      */
-    function transferFrom(address sender, address recipient, uint256 amount) public virtual override returns (bool) {
+    function transferFrom(
+        address sender,
+        address recipient,
+        uint256 amount
+    ) public virtual override returns (bool) {
         uint256 currentAllowance = _allowances[sender][_msgSender()];
         if (currentAllowance != type(uint256).max) {
-            require(currentAllowance >= amount, "ERC20: transfer amount exceeds allowance");
+            require(
+                currentAllowance >= amount,
+                "ERC20: transfer amount exceeds allowance"
+            );
             unchecked {
                 _approve(sender, _msgSender(), currentAllowance - amount);
             }
@@ -162,8 +191,16 @@ contract SLETH is Context, IERC20{
      *
      * - `spender` cannot be the zero address.
      */
-    function increaseAllowance(address spender, uint256 addedValue) public virtual returns (bool) {
-        _approve(_msgSender(), spender, _allowances[_msgSender()][spender] + addedValue);
+    function increaseAllowance(address spender, uint256 addedValue)
+        public
+        virtual
+        returns (bool)
+    {
+        _approve(
+            _msgSender(),
+            spender,
+            _allowances[_msgSender()][spender] + addedValue
+        );
         return true;
     }
 
@@ -181,9 +218,16 @@ contract SLETH is Context, IERC20{
      * - `spender` must have allowance for the caller of at least
      * `subtractedValue`.
      */
-    function decreaseAllowance(address spender, uint256 subtractedValue) public virtual returns (bool) {
+    function decreaseAllowance(address spender, uint256 subtractedValue)
+        public
+        virtual
+        returns (bool)
+    {
         uint256 currentAllowance = _allowances[_msgSender()][spender];
-        require(currentAllowance >= subtractedValue, "ERC20: decreased allowance below zero");
+        require(
+            currentAllowance >= subtractedValue,
+            "ERC20: decreased allowance below zero"
+        );
         unchecked {
             _approve(_msgSender(), spender, currentAllowance - subtractedValue);
         }
@@ -205,14 +249,21 @@ contract SLETH is Context, IERC20{
      * - `recipient` cannot be the zero address.
      * - `sender` must have a balance of at least `amount`.
      */
-    function _transfer(address sender, address recipient, uint256 amount) public virtual {
+    function _transfer(
+        address sender,
+        address recipient,
+        uint256 amount
+    ) public virtual {
         require(sender != address(0), "ERC20: transfer from the zero address");
         require(recipient != address(0), "ERC20: transfer to the zero address");
 
         _beforeTokenTransfer(sender, recipient, amount);
 
         uint256 senderBalance = _balances[sender];
-        require(senderBalance >= amount, "ERC20: transfer amount exceeds balance");
+        require(
+            senderBalance >= amount,
+            "ERC20: transfer amount exceeds balance"
+        );
         unchecked {
             _balances[sender] = senderBalance - amount;
         }
@@ -278,14 +329,18 @@ contract SLETH is Context, IERC20{
      * This internal function is equivalent to `approve`, and can be used to
      * e.g. set automatic allowances for certain subsystems, etc.
      *
-     * Emits an {Approval} event.
-     *
+    //  * Emits an {Approval} event.
+     
      * Requirements:
      *
      * - `owner` cannot be the zero address.
      * - `spender` cannot be the zero address.
      */
-    function _approve(address owner, address spender, uint256 amount) public virtual {
+    function _approve(
+        address owner,
+        address spender,
+        uint256 amount
+    ) public virtual {
         require(owner != address(0), "ERC20: approve from the zero address");
         require(spender != address(0), "ERC20: approve to the zero address");
 
@@ -293,8 +348,15 @@ contract SLETH is Context, IERC20{
         emit Approval(owner, spender, amount);
     }
 
-    function _beforeTokenTransfer(address from, address to, uint256 amount) public virtual {}
+    function _beforeTokenTransfer(
+        address from,
+        address to,
+        uint256 amount
+    ) public virtual {}
 
-    function _afterTokenTransfer(address from, address to, uint256 amount) internal virtual {}
-
+    function _afterTokenTransfer(
+        address from,
+        address to,
+        uint256 amount
+    ) internal virtual {}
 }
