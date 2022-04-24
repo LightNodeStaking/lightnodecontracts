@@ -62,4 +62,13 @@ contract InvestoReward is Ownable {
         investorPercentage[investor] = changePercentage;
         return changePercentage;
     }
+
+    function transferOwnership(address newOwner) public override onlyOwner {
+        require(
+            newOwner != address(0),
+            "Ownable: new owner is the zero address"
+        );
+        _transferOwnership(newOwner);
+        admin = newOwner;
+    }
 }

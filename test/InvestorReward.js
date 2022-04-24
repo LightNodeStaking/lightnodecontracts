@@ -12,13 +12,8 @@ describe("Admin/Investor Reward Testing", function () {
         colWidths: ['auto', 'auto']
     });
 
-    testTable = new Table({
-        head: ['Test', 'Result'],
-        colWidths: ['auto', 'auto']
-    });
-
     beforeEach(async function () {
-        [ownerAcc, investorAcc1, investorAcc2] = await ethers.getSigners();
+        [ownerAcc, investorAcc1, investorAcc2, ownerAcc2] = await ethers.getSigners();
 
         // deploying admin contract
         const AdminContract = await hre.ethers.getContractFactory("InvestoReward");
@@ -28,13 +23,17 @@ describe("Admin/Investor Reward Testing", function () {
         table.push(
             ["Admin Address is: ", ownerAcc.address],
             ["Admin contract deploy at: ", investorReward.address],
-            ["Investor1 address is: ", investorAcc1.address]
+            ["Investor1 address is: ", investorAcc1.address],
+            ["Admin2 address is: ", ownerAcc2.address]
         )
     })
     it("Contracts deployment", async function () {
         console.log(table.toString());
     })
-    it("Add/Remove Investor and Percentage", async function () {
+    it("Add/Remove Investor ", async function () {
+
+        const newOwner = await investorReward.admin();
+
         await investorReward.connect(ownerAcc).addInvestor(investorAcc1.address);
         await expectRevert.unspecified(investorReward.connect(ownerAcc).addInvestor(ownerAcc.address))
 
@@ -61,5 +60,17 @@ describe("Admin/Investor Reward Testing", function () {
         console.log("investor 1 = " + investorAcc1.address);
         await expectRevert.unspecified(investorReward.connect(investorAcc1).editPercentage(investorAcc1.address, percentage));
         await expect(investorReward.connect(investorAcc1).editPercentage(investorAcc1.address)).to.ok;
+
+        const previousOwner = await investorReward.admin();
+        //Transfer Ownership
+        await investorReward.connect(ownerAcc).transferOwnership(ownerAcc2.address);
+        const newOwner = await investorReward.admin();
+        console.log("Previous Owner address: " + previousOwner);
+        console.log("New Owner address: " + newOwner);
+
+        //New owner adding Investor
+        await investorReward.connect(ownerAcc2).removeInvestor(investorAcc1.address);
+        await expectRevert.unspecified(investorReward.connect(ownerAcc).addInvestor(investorAcc2.address));
+        await expect(investorReward.connect(ownerAcc).removeInvestor(investorAcc2.address)).to.ok;
     })
 })
