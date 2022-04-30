@@ -29,5 +29,8 @@
   "bugs": {
     "url": "https://github.com/LightNodeStaking/lightnodecontracts/issues"
   },
-  "homepage": "https://github.com/LightNodeStaking/lightnodecontracts#readme"
+  "homepage": "https://github.com/LightNodeStaking/lightnodecontracts#readme",
+  "dependencies": {
+    "solidity-bytes-utils": "^0.8.0"
+  }
 }
