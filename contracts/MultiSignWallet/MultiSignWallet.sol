@@ -2,12 +2,15 @@
 pragma solidity ^0.8.0;
 
 contract MultiSigWallet {
+    event AddOwner(address indexed owner, address indexed NewOwner);
+    event RemoveOwner(address indexed owner, address indexed removedOwner);
     event Deposit(address indexed sender, uint256 amount, uint256 balance);
     event Submit(uint256 indexed txIndex);
     event Approve(address indexed owner, uint256 indexed txIndex);
     event Revoke(address indexed owner, uint256 indexed txIndex);
     event Execute(uint256 indexed txIndex);
 
+    address public owner;
     address[] public owners;
     mapping(address => bool) public isOwner;
     uint256 public required;
@@ -45,6 +48,10 @@ contract MultiSigWallet {
     }
 
     constructor(address[] memory _owners, uint256 _required) {
+        addOwner(_owners, _required);
+    }
+
+    function addOwner(address[] memory _owners, uint256 _required) public {
         require(_owners.length > 0, "NO_OWNER");
         require(
             _required > 0 && _required <= _owners.length,
@@ -52,7 +59,7 @@ contract MultiSigWallet {
         );
 
         for (uint256 i = 0; i < _owners.length; i++) {
-            address owner = _owners[i];
+            owner = _owners[i];
 
             require(owner != address(0), "INVALID_OWNER");
             require(!isOwner[owner], "ALREADY_EXIST");
@@ -62,10 +69,19 @@ contract MultiSigWallet {
         }
 
         required = _required;
+
+        emit AddOwner(msg.sender, owner);
     }
 
     receive() external payable {
         emit Deposit(msg.sender, msg.value, address(this).balance);
+    }
+
+    function removeOwner(address _owner) public onlyOwner {
+        require(isOwner[_owner], "ADDRESS_NOT_OWNER");
+        isOwner[_owner] = false;
+
+        emit RemoveOwner(msg.sender, _owner);
     }
 
     function submitTx(
