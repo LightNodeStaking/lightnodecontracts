@@ -78,11 +78,63 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AccessControl{
 
     modifier operatorExist( uint256 _id){
         require(_id < getNodeOperatorsCount(), "NODE_OPERATOT_DOESN'T EXTIST");
+        _;
+    }
+
+    function initialize(address _slEth) public {
+        TOTAL_OPERATORS_COUNT_POSITION.setStorageUint256(0);
+        ACTIVE_OPERATORS_COUNT_POSITION.setStorageUint256(0);
+        KEYS_OP_INDEX_POSITION.setStorageUint256(0);
+        LIGHT_NODE_POSITION.setStorageAddress(_slEth);
+    }
+
+    function addNodeOperator(string memory _name, address _rewardAdd) external onlyRole(ADD_NODE_OPERATOR_ROLE) validAddress(_rewardAdd) returns(uint256 id){
+        id = getNodeOperatorsCount();
+        TOTAL_OPERATORS_COUNT_POSITION.setStorageUint256(id + 1);
+
+        NodeOperator storage operator = operators[id];
+        //update active operator count
+        uint256 activeOperator = getActiveNodeOperatorsCount();
+        ACTIVE_OPERATORS_COUNT_POSITION.setStorageUint256(activeOperator+1);
+
+        operator.active = true;
+        operator.name = _name;
+        operator.rewardAddress = _rewardAdd;
+        operator.stakingLimit = 0;
+
+        emit NodeOperatorAdded(id, _name, _rewardAdd, 0);
+
+        return id;
 
     }
 
-    function initialize(address _slEth) onlyInit{
+    function setNodeOpeartorActive(uint _id, bool _bool) external onlyRole(SET_NODE_OPERATOR_ACTIVE_ROLE) operatorExist(_id){
+        _increaseKeysOpIndex();
 
+
+
+    }
+
+    
+
+    function _increaseKeysOpIndex() internal {
+        uint256 keysOpIndex = getKeysOpIndex();
+        KEYS_OP_INDEX_POSITION.setStorageUint256(keysOpIndex + 1);
+        emit KeysOpIndexSet(keysOpIndex + 1);
+    }
+
+    //view functions
+    
+    /**
+    * @notice Returns a monotonically increasing counter that gets incremented when any of the following happens:
+    *   1. a node operator's key(s) is added;
+    *   2. a node operator's key(s) is removed;
+    *   3. a node operator's approved keys limit is changed.
+    *   4. a node operator was activated/deactivated. Activation or deactivation of node operator
+    *      might lead to usage of unvalidated keys in the assignNextSigningKeys method.
+    */
+    function getKeysOpIndex() public view returns (uint256) {
+        return KEYS_OP_INDEX_POSITION.getStorageUint256();
     }
 
    /**
@@ -90,6 +142,11 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AccessControl{
       */
     function getNodeOperatorsCount() public view returns (uint256) {
         return TOTAL_OPERATORS_COUNT_POSITION.getStorageUint256();
+    }
+
+    function getActiveNodeOperatorsCount() public view returns(uint256){
+        return ACTIVE_OPERATORS_COUNT_POSITION.getStorageUint256();
+
     }
 }
 
