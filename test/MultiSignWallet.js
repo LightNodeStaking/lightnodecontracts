@@ -38,7 +38,7 @@ describe("Multi- Signature Wallet Testing", function () {
 
     it('Adding Owners', async function () {
         //add Owners
-        await expect(multiSignWallet.connect(ownerAcc).addOwner(ownerAcc1.address, 'true')).to.ok;
+        await multiSignWallet.connect(ownerAcc).addOwner(ownerAcc1.address, 'true');
         console.log("OwnerAcc 1 added to owner list: " + ownerAcc1.address)
 
         await multiSignWallet.connect(ownerAcc1).addOwner(ownerAcc2.address, "true");
@@ -59,6 +59,11 @@ describe("Multi- Signature Wallet Testing", function () {
     })
 
     it('Submit Tx / Approve Tx / Exceute Tx / Revoke Tx', async function () {
+        //add Owners
+        await multiSignWallet.connect(ownerAcc).addOwner(ownerAcc1.address, 'true');
+        await multiSignWallet.connect(ownerAcc1).addOwner(ownerAcc2.address, "true");
+        await multiSignWallet.connect(ownerAcc2).addOwner(ownerAcc3.address, "true");
+
         //Submit Transaction
         console.log("Submit Transaction")
 
