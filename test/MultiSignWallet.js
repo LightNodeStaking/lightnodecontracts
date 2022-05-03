@@ -66,6 +66,11 @@ describe("Multi- Signature Wallet Testing", function () {
 
         //Submit Transaction
         console.log("Submit Transaction")
+        let to, value, data;
+        to = ownerAcc1.address;
+        value = 0
+        data = "0x00"
+        await multiSignWallet.connect(ownerAcc).submitTx(to, value, data);
 
 
         console.log("Approve Transaction")

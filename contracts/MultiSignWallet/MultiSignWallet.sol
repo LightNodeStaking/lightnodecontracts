@@ -72,16 +72,6 @@ contract MultiSignWallet {
         emit AddOwner(msg.sender, _owner);
     }
 
-    function numOfConfirmation(uint256 _required) public {
-        require(
-            _required > 0 && _required <= owners.length,
-            "INVALID_CONFIRMATIONS_REQUIRED"
-        );
-        required = _required;
-
-        emit ConfirmationRequired(_required);
-    }
-
     receive() external payable {
         emit Deposit(msg.sender, msg.value, address(this).balance);
     }
@@ -91,6 +81,16 @@ contract MultiSignWallet {
         isOwner[_owner] = false;
 
         emit RemoveOwner(msg.sender, _owner);
+    }
+
+    function numOfConfirmation(uint256 _required) public {
+        require(
+            _required > 0 && _required <= owners.length,
+            "INVALID_CONFIRMATIONS_REQUIRED"
+        );
+        required = _required;
+
+        emit ConfirmationRequired(_required);
     }
 
     function submitTx(
