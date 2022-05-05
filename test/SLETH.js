@@ -36,7 +36,6 @@ describe("Sleth's tests", function () {
 
         //Transfering 10000 token to acc1
         await slEth.connect(SlEthOwner).transfer(acc1.address, "100000000000000000000000")
-
         table.push(
             ["SLETH token deployed at: ", slEth.address],
             ["SlEth owner is: ", SlEthOwner.address],

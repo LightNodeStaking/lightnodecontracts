@@ -85,7 +85,7 @@ contract MultiSignWallet {
 
     function numOfConfirmation(uint256 _required) public {
         require(
-            _required > 0 && _required <= owners.length,
+            _required > 3 && _required <= owners.length,
             "INVALID_CONFIRMATIONS_REQUIRED"
         );
         required = _required;

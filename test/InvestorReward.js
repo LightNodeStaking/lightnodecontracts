@@ -33,7 +33,7 @@ describe("Admin/Investor Reward Testing", function () {
     it("Add/Remove Investor ", async function () {
 
         //const newOwner = await investorReward.admin();
-
+        let trans;
         await investorReward.connect(ownerAcc).addInvestor(investorAcc1.address);
         await expectRevert.unspecified(investorReward.connect(ownerAcc).addInvestor(ownerAcc.address))
 
