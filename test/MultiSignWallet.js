@@ -2,7 +2,6 @@ const { expect } = require("chai");
 const { ethers } = require("hardhat");
 const { expectRevert } = require('@openzeppelin/test-helpers');
 const Table = require("cli-table3");
-const { transaction } = require("@openzeppelin/test-helpers/src/send");
 
 describe("Multi- Signature Wallet Testing", function () {
     let multiSignWallet;
@@ -15,22 +14,27 @@ describe("Multi- Signature Wallet Testing", function () {
 
     beforeEach(async function () {
 
-        [ownerAcc, ownerAcc1, ownerAcc2, ownerAcc3, notOwner] = await ethers.getSigners();
+        [ownerAcc1, ownerAcc2, ownerAcc3, ownerAcc4, notOwner] = await ethers.getSigners();
+
+        let owners = [ownerAcc1.address, ownerAcc2.address];
+        const required = 2;
 
         const contractWallet = await hre.ethers.getContractFactory("MultiSignWallet");
-        multiSignWallet = await contractWallet.connect(ownerAcc).deploy(ownerAcc.address);
+        multiSignWallet = await contractWallet.connect(ownerAcc1).deploy(owners, required);
 
 
         ta.push(
-            ['Owner Address is: ', ownerAcc.address],
+            ['Owner 1 Address is: ', ownerAcc1.address],
             ['Contract deployed at: ', multiSignWallet.address],
-            ['Owner1 Address is: ', ownerAcc1.address],
-            ['Owner2 Address is: ', ownerAcc2.address],
-            ['Owner2 Address is: ', ownerAcc3.address],
+            ['Owner 2 Address is: ', ownerAcc2.address],
+            ['Owner 3 Address is: ', ownerAcc3.address],
+            ['Owner 4 Address is: ', ownerAcc4.address],
             ['Not Owner Address is: ', notOwner.address]
         )
-        let contractOwner = await multiSignWallet.owner()
-        console.log("Owner is: ", contractOwner)
+        // const ownerOne = await multiSignWallet.owners(0)
+        // console.log("Owner 1 is: ", ownerOne)
+        // const ownerTwo = await multiSignWallet.owners(1)
+        // console.log("Owner 2 is: ", ownerTwo)
 
 
     })
@@ -41,61 +45,49 @@ describe("Multi- Signature Wallet Testing", function () {
 
     it('Adding Owners', async function () {
         //add Owners
-        let transact;
-        transact = await multiSignWallet.connect(ownerAcc).addOwner(ownerAcc1.address, 'true');
-        //console.log(transact)
-        console.log("OwnerAcc 1 added to owner list: " + ownerAcc1.address)
+        let required = 2;
+        let addOwners = [ownerAcc3.address, ownerAcc4.address]
+        await multiSignWallet.connect(ownerAcc1).addOwner(addOwners, required);
 
-        await multiSignWallet.connect(ownerAcc1).addOwner(ownerAcc2.address, "true");
-        console.log("OwnerAcc 2 added to owner list: " + ownerAcc2.address)
+        const ownerOne = await multiSignWallet.owners(0)
+        console.log("Owner 1 is: ", ownerOne)
 
-        //await multiSignWallet.connect(notOwner).addOwner(ownerAcc1.address, 'true');
-        await expectRevert.unspecified(multiSignWallet.connect(notOwner).addOwner(ownerAcc1.address, 'true'));
+        const ownerTwo = await multiSignWallet.owners(1)
+        console.log("Owner 2 is: ", ownerTwo)
 
-        //remove Owners
-        await multiSignWallet.connect(ownerAcc1).removeOwner(ownerAcc.address, "true");
-        console.log("OwnerAcc removed from owner list: " + ownerAcc.address)
+        const ownerThree = await multiSignWallet.owners(2)
+        console.log("Owner 3 is: ", ownerThree)
 
-        await multiSignWallet.connect(ownerAcc1).removeOwner(ownerAcc2.address, "true");
-        console.log("OwnerAcc 2 removed from owner list: " + ownerAcc2.address)
+        const ownerFour = await multiSignWallet.owners(3)
+        console.log("Owner 4 is: ", ownerFour)
 
-        //await multiSignWallet.connect(notOwner).removeOwner(ownerAcc2.address, "true");
-        await expectRevert.unspecified(multiSignWallet.connect(notOwner).removeOwner(ownerAcc2.address, "true"));
+        // remove Owners
+        await multiSignWallet.connect(ownerAcc1).removeOwner(ownerAcc3.address);
+        await multiSignWallet.connect(ownerAcc1).removeOwner(ownerAcc4.address);
+
+        const removeOwnerThree = await multiSignWallet.owners(2)
+        console.log("Remove Owner 3: ", removeOwnerThree)
+        const removeOwnerFour = await multiSignWallet.owners(3)
+        console.log("Remove Owner 4: ", removeOwnerFour)
+
     })
 
     it('Submit Tx / Approve Tx / Exceute Tx / Revoke Tx', async function () {
         //add Owners
-        let trans;
-
-        trans = await multiSignWallet.connect(ownerAcc).addOwner(ownerAcc1.address, 'true');
-        //console.log(trans);
-        await multiSignWallet.connect(ownerAcc1).addOwner(ownerAcc2.address, "true");
-        await multiSignWallet.connect(ownerAcc2).addOwner(ownerAcc3.address, "true");
+        let required = 2;
+        let addOwners = [ownerAcc3.address, ownerAcc4.address]
+        await multiSignWallet.connect(ownerAcc1).addOwner(addOwners, required);
 
         //Submit Transaction
+        await multiSignWallet.connect(ownerAcc1).submitTx(ownerAcc1.address, 0, "0x00");
+        //await multiSignWallet.connect(notOwner).submitTx(ownerAcc1.address, 0, "0x00");
+        await expectRevert.unspecified(multiSignWallet.connect(notOwner).submitTx(ownerAcc2.address, 1, "0x00"))
 
-        // let to, value, data, transact;
-        // to = ownerAcc1.address;
-        // value = 0
-        // data = "0x00"
+        //Approve Transaction
+        await multiSignWallet.connect(ownerAcc2).approve(0)
+        await expectRevert.unspecified(multiSignWallet.connect(ownerAcc2).approve(0))
+        await multiSignWallet.connect(ownerAcc3).approve(0)
 
-        // transact = await multiSignWallet.connect(ownerAcc).submitTx(to, value, data);
-        // console.log(transact)
-
-        // to = ownerAcc2.address
-        // transact = await multiSignWallet.connect(ownerAcc).submitTx(to, value, data);
-        // console.log(transact)
-
-        // transact = await multiSignWallet.connect(ownerAcc).submitTx(notOwner.address, 0, '0x00');
-        // console.log(transact)
-
-        //expectRevert.unspecified(await multiSignWallet.connect(ownerAcc).submitTx(to, value, data));
-
-        // console.log("Approve Transaction")
-
-        // console.log("Exceute Transaction")
-
-        // console.log("Revoke Transaction")
 
     })
 
