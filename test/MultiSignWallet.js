@@ -101,9 +101,10 @@ describe("Multi- Signature Wallet Testing", function () {
         // await multiSignWallet.connect(notOwner).execute(0)
 
         let getOwners = await multiSignWallet.getOwners();
-
         console.log("Owner List: ", getOwners)
 
+        let transactionCount = await multiSignWallet.getTransactionCount();
+        console.log("Transaction Count List: ", transactionCount)
     })
 
 })
