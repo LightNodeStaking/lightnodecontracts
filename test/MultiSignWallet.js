@@ -81,8 +81,8 @@ describe("Multi- Signature Wallet Testing", function () {
         //Submit Transaction
         console.log("Submiting Transaction")
         await multiSignWallet.connect(ownerAcc1).submitTx(ownerAcc1.address, 0, "0x00");
-        //await multiSignWallet.connect(notOwner).submitTx(ownerAcc1.address, 0, "0x00");
         await expectRevert.unspecified(multiSignWallet.connect(notOwner).submitTx(ownerAcc2.address, 1, "0x00"))
+        //await multiSignWallet.connect(notOwner).submitTx(ownerAcc1.address, 0, "0x00");
 
         //Approve Transaction
         console.log("Approve Transaction")
@@ -90,10 +90,19 @@ describe("Multi- Signature Wallet Testing", function () {
         await expectRevert.unspecified(multiSignWallet.connect(ownerAcc2).approve(0))
         await multiSignWallet.connect(ownerAcc3).approve(0)
 
+        //Revoke Transaction - Code below are to be uncomment, if the transaction to be revoked.
+        // console.log("Revoke Transaction")
+        // await multiSignWallet.connect(ownerAcc2).revoke(0)
+
+        //Execute Transaction
         console.log("Execute Transaction")
         await multiSignWallet.connect(ownerAcc1).execute(0)
-        await multiSignWallet.connect(ownerAcc2).execute(0)
-        await multiSignWallet.connect(ownerAcc3).execute(0)
+        await expectRevert.unspecified(multiSignWallet.connect(notOwner).execute(0))
+        // await multiSignWallet.connect(notOwner).execute(0)
+
+        let getOwners = await multiSignWallet.getOwners();
+
+        console.log("Owner List: ", getOwners)
 
     })
 
