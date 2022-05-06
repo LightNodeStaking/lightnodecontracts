@@ -6,7 +6,7 @@ import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "../lib/UnStructuredData.sol";
-import "../lib/Memoryutils.sol";
+import "../lib/MemoryUtils.sol";
 import "solidity-bytes-utils/contracts/BytesLib.sol";
 
 contract NodeOperatorsRegistry is INodeOperatorsRegistry, AccessControl{
@@ -25,7 +25,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AccessControl{
     uint256 constant public PUBKEY_LENGTH = 48;
     uint256 constant public SIGNATURE_LENGTH = 96;
 
-    uint256 internal constant UINT64_MAX = uint256(uint64(-1));
+    uint256 internal constant UINT64_MAX = uint256(type(uint64).max);
     bytes32 internal constant SIGNING_KEYS_MAPPING_NAME = keccak256("lightNode.NodeOperatorsRegistry.signingKeysMappingName");
 
 
@@ -189,7 +189,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AccessControl{
     * @param _pubkeys Several concatenated validator signing keys
     * @param _signatures Several concatenated signatures for (pubkey, withdrawal_credentials, 32000000000) messages
     */
-    function addSigningKeys(uint256 _operator_id, uint256 _quantity, bytes _pubkeys, bytes _signatures) external
+    function addSigningKeys(uint256 _operator_id, uint256 _quantity, bytes memory _pubkeys, bytes memory _signatures) external
         onlyRole(MANAGE_SIGNING_KEYS)
     {
         _addSigningKeys(_operator_id, _quantity, _pubkeys, _signatures);
@@ -209,8 +209,8 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AccessControl{
     function addSigningKeysOperatorBH(
         uint256 _operator_id,
         uint256 _quantity,
-        bytes _pubkeys,
-        bytes _signatures
+        bytes memory _pubkeys,
+        bytes memory _signatures
     )
         external
     {
@@ -325,8 +325,8 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AccessControl{
 
         if (numAssignedKeys > 1) {
             // we can allocate without zeroing out since we're going to rewrite the whole array
-            pubkeys = MemUtils.unsafeAllocateBytes(numAssignedKeys * PUBKEY_LENGTH);
-            signatures = MemUtils.unsafeAllocateBytes(numAssignedKeys * SIGNATURE_LENGTH);
+            pubkeys = MemoryUtils.unSafeBytesAllocation(numAssignedKeys * PUBKEY_LENGTH);
+            signatures = MemoryUtils.unSafeBytesAllocation(numAssignedKeys * SIGNATURE_LENGTH);
         }
 
         uint256 numLoadedKeys = 0;
@@ -345,8 +345,8 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AccessControl{
                 if (numAssignedKeys == 1) {
                     return (pubkey, signature);
                 } else {
-                    MemUtils.copyBytes(pubkey, pubkeys, numLoadedKeys * PUBKEY_LENGTH);
-                    MemUtils.copyBytes(signature, signatures, numLoadedKeys * SIGNATURE_LENGTH);
+                    MemoryUtils.copyBytes(pubkey, pubkeys, numLoadedKeys * PUBKEY_LENGTH);
+                    MemoryUtils.copyBytes(signature, signatures, numLoadedKeys * SIGNATURE_LENGTH);
                     ++numLoadedKeys;
                 }
             }
@@ -358,6 +358,50 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AccessControl{
 
         assert(numLoadedKeys == numAssignedKeys);
         return (pubkeys, signatures);
+    }
+
+    /**
+    * @notice Returns the rewards distribution proportional to the effective stake for each node operator.
+    * @param _totalRewardShares Total amount of reward shares to distribute.
+    */
+    function getRewardsDistribution(uint256 _totalRewardShares) external view
+        returns (
+            address[] memory recipients,
+            uint256[] memory shares
+        )
+    {
+        uint256 nodeOperatorCount = getNodeOperatorsCount();
+
+        uint256 activeCount = getActiveNodeOperatorsCount();
+        recipients = new address[](activeCount);
+        shares = new uint256[](activeCount);
+        uint256 idx = 0;
+
+        uint256 effectiveStakeTotal = 0;
+        for (uint256 operatorId = 0; operatorId < nodeOperatorCount; ++operatorId) {
+            NodeOperator storage operator = operators[operatorId];
+            if (!operator.active)
+                continue;
+
+            uint256 effectiveStake = operator.usedSigningKeys - (operator.stoppedValidators);
+            effectiveStakeTotal = effectiveStakeTotal + (effectiveStake);
+
+            recipients[idx] = operator.rewardAddress;
+            shares[idx] = effectiveStake;
+
+            ++idx;
+        }
+
+        if (effectiveStakeTotal == 0)
+            return (recipients, shares);
+
+        uint256 perValidatorReward = _totalRewardShares.div(effectiveStakeTotal);
+
+        for (idx = 0; idx < activeCount; ++idx) {
+            shares[idx] = shares[idx].mul(perValidatorReward);
+        }
+
+        return (recipients, shares);
     }
 
 
@@ -398,9 +442,9 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AccessControl{
         return KEYS_OP_INDEX_POSITION.getStorageUint256();
     }
 
-   /**
-      * @notice Returns total number of node operators
-      */
+    /**
+    * @notice Returns total number of node operators
+    */
     function getNodeOperatorsCount() public view returns (uint256) {
         return TOTAL_OPERATORS_COUNT_POSITION.getStorageUint256();
     }
@@ -409,5 +453,229 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AccessControl{
         return ACTIVE_OPERATORS_COUNT_POSITION.getStorageUint256();
 
     }
+
+    /**
+    * @notice Returns the n-th node operator
+    * @param _id Node Operator id
+    * @param _fullInfo If true, name will be returned as well
+    */
+    function getNodeOperator(uint256 _id, bool _fullInfo) external view
+        operatorExists(_id)
+        returns
+        (
+            bool active,
+            string memory name,
+            address rewardAddress,
+            uint64 stakingLimit,
+            uint64 stoppedValidators,
+            uint64 totalSigningKeys,
+            uint64 usedSigningKeys
+        )
+    { 
+        NodeOperator storage operator = operators[_id];
+
+        active = operator.active;
+        name = _fullInfo ? operator.name : "";    // reading name is 2+ SLOADs
+        rewardAddress = operator.rewardAddress;
+        stakingLimit = operator.stakingLimit;
+        stoppedValidators = operator.stoppedValidators;
+        totalSigningKeys = operator.totalSigningKeys;
+        usedSigningKeys = operator.usedSigningKeys;
+    }
+
+    /**
+    * @notice Returns total number of signing keys of the node operator #`_operator_id`
+    */
+    function getTotalSigningKeyCount(uint256 _operator_id) external view operatorExists(_operator_id) returns (uint256) {
+        return operators[_operator_id].totalSigningKeys;
+    }
+
+    /**
+      * @notice Returns number of usable signing keys of the node operator #`_operator_id`
+      */
+    function getUnusedSigningKeyCount(uint256 _operator_id) external view operatorExists(_operator_id) returns (uint256) {
+        return operators[_operator_id].totalSigningKeys - (operators[_operator_id].usedSigningKeys);
+    }
+
+    /**
+    * @notice Returns n-th signing key of the node operator #`_operator_id`
+    * @param _operator_id Node Operator id
+    * @param _index Index of the key, starting with 0
+    * @return key Key
+    * @return depositSignature Signature needed for a deposit_contract.deposit call
+    * @return used Flag indication if the key was used in the staking
+    */
+    function getSigningKey(uint256 _operator_id, uint256 _index) external view
+        operatorExists(_operator_id)
+        returns (bytes memory key, bytes memory depositSignature, bool used)
+    {
+        require(_index < operators[_operator_id].totalSigningKeys, "KEY_NOT_FOUND");
+
+        (bytes memory key_, bytes memory signature) = _loadSigningKey(_operator_id, _index);
+
+        return (key_, signature, _index < operators[_operator_id].usedSigningKeys);
+    }
+
+    function _isEmptySigningKey(bytes memory _key) internal pure returns (bool) {
+        assert(_key.length == PUBKEY_LENGTH);
+        // algorithm applicability constraint
+        assert(PUBKEY_LENGTH >= 32 && PUBKEY_LENGTH <= 64);
+
+        uint256 k1;
+        uint256 k2;
+        assembly {
+            k1 := mload(add(_key, 0x20))
+            k2 := mload(add(_key, 0x40))
+        }
+
+        return 0 == k1 && 0 == (k2 >> ((2 * 32 - PUBKEY_LENGTH) * 8));
+    }
+
+    function to64(uint256 v) internal pure returns (uint64) {
+        assert(v <= uint256(type(uint64).max));
+        return uint64(v);
+    }
+
+    function _signingKeyOffset(uint256 _operator_id, uint256 _keyIndex) internal pure returns (uint256) {
+        return uint256(keccak256(abi.encodePacked(SIGNING_KEYS_MAPPING_NAME, _operator_id, _keyIndex)));
+    }
+
+    function _storeSigningKey(uint256 _operator_id, uint256 _keyIndex, bytes memory _key, bytes memory _signature) internal {
+        assert(_key.length == PUBKEY_LENGTH);
+        assert(_signature.length == SIGNATURE_LENGTH);
+        // algorithm applicability constraints
+        assert(PUBKEY_LENGTH >= 32 && PUBKEY_LENGTH <= 64);
+        assert(0 == SIGNATURE_LENGTH % 32);
+
+        // key
+        uint256 offset = _signingKeyOffset(_operator_id, _keyIndex);
+        uint256 keyExcessBits = (2 * 32 - PUBKEY_LENGTH) * 8;
+        assembly {
+            sstore(offset, mload(add(_key, 0x20)))
+            sstore(add(offset, 1), shl(keyExcessBits, shr(keyExcessBits, mload(add(_key, 0x40)))))
+        }
+        offset += 2;
+
+        // signature
+        for (uint256 i = 0; i < SIGNATURE_LENGTH; i += 32) {
+            assembly {
+                sstore(offset, mload(add(_signature, add(0x20, i))))
+            }
+            offset++;
+        }
+    }
+
+    function _addSigningKeys(uint256 _operator_id, uint256 _quantity, bytes memory _pubkeys, bytes memory _signatures) internal
+        operatorExists(_operator_id)
+    {
+        require(_quantity != 0, "NO_KEYS");
+        require(_pubkeys.length == _quantity.mul(PUBKEY_LENGTH), "INVALID_LENGTH");
+        require(_signatures.length == _quantity.mul(SIGNATURE_LENGTH), "INVALID_LENGTH");
+
+        _increaseKeysOpIndex();
+
+        for (uint256 i = 0; i < _quantity; ++i) {
+            bytes memory key = BytesLib.slice(_pubkeys, i * PUBKEY_LENGTH, PUBKEY_LENGTH);
+            require(!_isEmptySigningKey(key), "EMPTY_KEY");
+            bytes memory sig = BytesLib.slice(_signatures, i * SIGNATURE_LENGTH, SIGNATURE_LENGTH);
+
+            _storeSigningKey(_operator_id, operators[_operator_id].totalSigningKeys + i, key, sig);
+            emit SigningKeyAdded(_operator_id, key);
+        }
+
+        operators[_operator_id].totalSigningKeys = operators[_operator_id].totalSigningKeys + (to64(_quantity));
+    }
+
+    function _removeSigningKey(uint256 _operator_id, uint256 _index) internal
+        operatorExists(_operator_id)
+    {
+        require(_index < operators[_operator_id].totalSigningKeys, "KEY_NOT_FOUND");
+        require(_index >= operators[_operator_id].usedSigningKeys, "KEY_WAS_USED");
+
+        _increaseKeysOpIndex();
+
+        (bytes memory removedKey, ) = _loadSigningKey(_operator_id, _index);
+
+        uint256 lastIndex = operators[_operator_id].totalSigningKeys - (1);
+        if (_index < lastIndex) {
+            (bytes memory key, bytes memory signature) = _loadSigningKey(_operator_id, lastIndex);
+            _storeSigningKey(_operator_id, _index, key, signature);
+        }
+
+        _deleteSigningKey(_operator_id, lastIndex);
+        operators[_operator_id].totalSigningKeys = operators[_operator_id].totalSigningKeys - (1);
+
+        if (_index < operators[_operator_id].stakingLimit) {
+            // decreasing the staking limit so the key at _index can't be used anymore
+            operators[_operator_id].stakingLimit = uint64(_index);
+        }
+
+        emit SigningKeyRemoved(_operator_id, removedKey);
+    }
+
+    
+    function _deleteSigningKey(uint256 _operator_id, uint256 _keyIndex) internal {
+        uint256 offset = _signingKeyOffset(_operator_id, _keyIndex);
+        for (uint256 i = 0; i < (PUBKEY_LENGTH + SIGNATURE_LENGTH) / 32 + 1; ++i) {
+            assembly {
+                sstore(add(offset, i), 0)
+            }
+        }
+    }
+
+    function _loadSigningKey(uint256 _operator_id, uint256 _keyIndex) internal view returns (bytes memory key, bytes memory signature) {
+        // algorithm applicability constraints
+        assert(PUBKEY_LENGTH >= 32 && PUBKEY_LENGTH <= 64);
+        assert(0 == SIGNATURE_LENGTH % 32);
+
+        uint256 offset = _signingKeyOffset(_operator_id, _keyIndex);
+
+        // key
+        bytes memory tmpKey = new bytes(64);
+        assembly {
+            mstore(add(tmpKey, 0x20), sload(offset))
+            mstore(add(tmpKey, 0x40), sload(add(offset, 1)))
+        }
+        offset += 2;
+        key = BytesLib.slice(tmpKey, 0, PUBKEY_LENGTH);
+
+        // signature
+        signature = new bytes(SIGNATURE_LENGTH);
+        for (uint256 i = 0; i < SIGNATURE_LENGTH; i += 32) {
+            assembly {
+                mstore(add(signature, add(0x20, i)), sload(offset))
+            }
+            offset++;
+        }
+
+        return (key, signature);
+    }
+
+    function _loadOperatorCache() internal view returns (DepositLookupCacheEntry[] memory cache) {
+        cache = new DepositLookupCacheEntry[](getActiveNodeOperatorsCount());
+        if (0 == cache.length)
+            return cache;
+
+        uint256 totalOperators = getNodeOperatorsCount();
+        uint256 idx = 0;
+        for (uint256 operatorId = 0; operatorId < totalOperators; ++operatorId) {
+            NodeOperator storage operator = operators[operatorId];
+
+            if (!operator.active)
+                continue;
+
+            DepositLookupCacheEntry memory entry = cache[idx++];
+            entry.id = operatorId;
+            entry.stakingLimit = operator.stakingLimit;
+            entry.stoppedValidators = operator.stoppedValidators;
+            entry.totalSigningKeys = operator.totalSigningKeys;
+            entry.usedSigningKeys = operator.usedSigningKeys;
+            entry.initialUsedSigningKeys = entry.usedSigningKeys;
+        }
+        require(idx == cache.length, "INCOSISTENT_ACTIVE_COUNT");
+
+        return cache;
+    }
+
 }
 
