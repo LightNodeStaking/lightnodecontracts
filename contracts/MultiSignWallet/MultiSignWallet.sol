@@ -8,7 +8,7 @@ contract MultiSignWallet {
     event Submit(uint256 indexed txIndex);
     event Approve(address indexed owner, uint256 indexed txIndex);
     event Revoke(address indexed owner, uint256 indexed txIndex);
-    event Execute(uint256 indexed txIndex);
+    event Execute(address indexed owner, uint256 indexed txIndex);
 
     address public owner;
     address[] public owners;
@@ -137,7 +137,7 @@ contract MultiSignWallet {
         );
         require(success, "TX_FAILED");
 
-        emit Execute(_txIndex);
+        emit Execute(msg.sender, _txIndex);
     }
 
     function revoke(uint256 _txIndex)
@@ -159,5 +159,25 @@ contract MultiSignWallet {
 
     function getTransactionCount() public view returns (uint256) {
         return transactions.length;
+    }
+
+    function getTransaction(uint256 _txIndex)
+        public
+        view
+        returns (
+            address to,
+            uint256 value,
+            bytes memory data,
+            bool executed
+        )
+    {
+        Transaction storage transaction = transactions[_txIndex];
+
+        return (
+            transaction.to,
+            transaction.value,
+            transaction.data,
+            transaction.executed
+        );
     }
 }

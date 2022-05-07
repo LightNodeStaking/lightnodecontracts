@@ -1,4 +1,4 @@
-const { expect } = require("chai");
+const { expect, assert } = require("chai");
 const { ethers } = require("hardhat");
 const { expectRevert } = require('@openzeppelin/test-helpers');
 const Table = require("cli-table3");
@@ -43,7 +43,7 @@ describe("Multi- Signature Wallet Testing", function () {
         console.log(ta.toString());
     })
 
-    it('Adding Owners', async function () {
+    it('Adding Owners/Removing Owners', async function () {
         //add Owners
         let required = 2;
         let addOwners = [ownerAcc3.address, ownerAcc4.address]
@@ -114,17 +114,28 @@ describe("Multi- Signature Wallet Testing", function () {
         await expectRevert.unspecified(multiSignWallet.connect(ownerAcc2).approve(0))
         await multiSignWallet.connect(ownerAcc3).approve(0)
 
+        let ownerList = [ownerAcc1.address, ownerAcc2.address, ownerAcc3.address, ownerAcc4.address]
+
         //Execute Transaction
         console.log("Execute Transaction")
-        await multiSignWallet.connect(ownerAcc1).execute(0)
-        await expectRevert.unspecified(multiSignWallet.connect(notOwner).execute(0))
+        await expect(multiSignWallet.connect(ownerAcc1).execute(0)).to.emit(multiSignWallet, "Execute").withArgs(ownerList[0], 0)
+
+        const txDetails = await multiSignWallet.getTransaction(0)
+        expect(txDetails.to).to.equal(ownerList[0])
+        expect(txDetails.value).to.equal(0)
+        expect(txDetails.data).to.equal("0x00")
+        expect(txDetails.executed).to.equal(true)
+
+
+
+        //await expectRevert.unspecified(multiSignWallet.connect(notOwner).execute(0))
         // await multiSignWallet.connect(notOwner).execute(0)
 
-        let getOwners = await multiSignWallet.getOwners();
-        console.log("Owner List: ", getOwners)
+        // let getOwners = await multiSignWallet.getOwners();
+        // console.log("Owner List: ", getOwners)
 
-        let transactionCount = await multiSignWallet.getTransactionCount();
-        console.log("Transaction Count List: ", transactionCount)
+        // let transactionCount = await multiSignWallet.getTransactionCount();
+        // console.log("Transaction Count List: ", transactionCount)
     })
 
 })
