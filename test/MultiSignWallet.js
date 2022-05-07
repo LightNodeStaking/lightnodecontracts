@@ -72,7 +72,7 @@ describe("Multi- Signature Wallet Testing", function () {
 
     })
 
-    it('Submit Tx / Approve Tx / Exceute Tx / Revoke Tx', async function () {
+    it('Submit Tx / Approve Tx / Revoke Tx', async function () {
         //add Owners
         let required = 2;
         let addOwners = [ownerAcc3.address, ownerAcc4.address]
@@ -83,6 +83,8 @@ describe("Multi- Signature Wallet Testing", function () {
         await multiSignWallet.connect(ownerAcc1).submitTx(ownerAcc1.address, 0, "0x00");
         await expectRevert.unspecified(multiSignWallet.connect(notOwner).submitTx(ownerAcc2.address, 1, "0x00"))
         //await multiSignWallet.connect(notOwner).submitTx(ownerAcc1.address, 0, "0x00");
+        await expectRevert.unspecified(multiSignWallet.connect(ownerAcc1).submitTx(notOwner.address, 0, "0x00"))
+        //await multiSignWallet.connect(ownerAcc1).submitTx(notOwner.address, 0, "0x00");
 
         //Approve Transaction
         console.log("Approve Transaction")
@@ -91,8 +93,26 @@ describe("Multi- Signature Wallet Testing", function () {
         await multiSignWallet.connect(ownerAcc3).approve(0)
 
         //Revoke Transaction - Code below are to be uncomment, if the transaction to be revoked.
-        // console.log("Revoke Transaction")
-        // await multiSignWallet.connect(ownerAcc2).revoke(0)
+        console.log("Revoke Transaction")
+        await multiSignWallet.connect(ownerAcc2).revoke(0)
+
+    })
+
+    it('Exceute Tx', async function () {
+        //add Owners
+        let required = 2;
+        let addOwners = [ownerAcc3.address, ownerAcc4.address]
+        await multiSignWallet.connect(ownerAcc1).addOwner(addOwners, required);
+
+        //Submit Transaction
+        await multiSignWallet.connect(ownerAcc1).submitTx(ownerAcc1.address, 0, "0x00");
+        await expectRevert.unspecified(multiSignWallet.connect(notOwner).submitTx(ownerAcc2.address, 1, "0x00"))
+        await expectRevert.unspecified(multiSignWallet.connect(ownerAcc1).submitTx(notOwner.address, 0, "0x00"))
+
+        //Approve Transaction
+        await multiSignWallet.connect(ownerAcc2).approve(0)
+        await expectRevert.unspecified(multiSignWallet.connect(ownerAcc2).approve(0))
+        await multiSignWallet.connect(ownerAcc3).approve(0)
 
         //Execute Transaction
         console.log("Execute Transaction")

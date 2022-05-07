@@ -89,6 +89,7 @@ contract MultiSignWallet {
         uint256 _value,
         bytes calldata _data
     ) public onlyOwner {
+        require(isOwner[_to], "ADDRESS_NOT_OWNER");
         transactions.push(
             Transaction({to: _to, value: _value, data: _data, executed: false})
         );
