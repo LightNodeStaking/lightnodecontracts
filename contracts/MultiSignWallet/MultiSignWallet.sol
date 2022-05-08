@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
+import "hardhat/console.sol";
 
 contract MultiSignWallet {
     event AddOwner(address indexed owner, address indexed NewOwner);
@@ -17,8 +18,8 @@ contract MultiSignWallet {
 
     // mapping from tx index => owner => bool
     mapping(uint256 => mapping(address => bool)) public approved;
-
-    Transaction[] public transactions;
+    mapping(uint256 => Transaction) public transactions;
+    //Transaction[] public transactions;
 
     struct Transaction {
         address to;
@@ -33,8 +34,12 @@ contract MultiSignWallet {
     }
 
     modifier txExists(uint256 _txIndex) {
-        require(_txIndex < transactions.length, "TX_NOT_EXIST");
+        require(transactions[_txIndex]._to != 0, "TX_NOT_EXIST");
         _;
+    }
+
+    modifier txApproved(uint256 _txIndex, address owner) {
+        require(approved[_txIndex][owner])
     }
 
     modifier notExecuted(uint256 _txIndex) {
@@ -88,13 +93,25 @@ contract MultiSignWallet {
         address _to,
         uint256 _value,
         bytes calldata _data
-    ) public onlyOwner {
-        require(isOwner[_to], "ADDRESS_NOT_OWNER");
-        transactions.push(
-            Transaction({to: _to, value: _value, data: _data, executed: false})
-        );
+    ) public onlyOwner returns (uint256 _txIndex) {
+        //console.log(txIndex);
+        txIndex = addTransaction[_to,_value, _data];
+        approve(_txIndex);
+        emit Submit(_txIndex);
+    }
 
-        emit Submit(transactions.length - 1);
+    function addTransaction(
+        address _to,
+        uint256 _value,
+        bytes _data
+    ) internal returns (uint256 txIndex) {
+        transactionId = transactionCount;
+        transactions[txIndex] = Transaction({
+            to: _to,
+            value: _value,
+            data: _data,
+            executed: false
+        });
     }
 
     function approve(uint256 _txIndex)
@@ -105,8 +122,11 @@ contract MultiSignWallet {
         notApproved(_txIndex)
     {
         approved[_txIndex][msg.sender] = true;
+        execute(uint256 _txIndex);
         emit Approve(msg.sender, _txIndex);
     }
+
+
 
     function _getApprovalCount(uint256 _txIndex)
         private
@@ -124,14 +144,16 @@ contract MultiSignWallet {
         external
         onlyOwner
         txExists(_txIndex)
+        txApproved(_txIndex, msg.sender)
         notExecuted(_txIndex)
     {
         require(_getApprovalCount(_txIndex) >= required, "NOT_ENOUGH_APPROVAL");
 
         Transaction storage transaction = transactions[_txIndex];
+        console.log("Transaction Index: ", _txIndex);
+        console.log("Transaction value: ", transaction.value);
 
         transaction.executed = true;
-
         (bool success, ) = transaction.to.call{value: transaction.value}(
             transaction.data
         );
@@ -140,12 +162,8 @@ contract MultiSignWallet {
         emit Execute(msg.sender, _txIndex);
     }
 
-    function revoke(uint256 _txIndex)
-        external
-        onlyOwner
-        txExists(_txIndex)
-        notExecuted(_txIndex)
-    {
+
+    function revoke(uint256 _txIndex) external onlyOwner txExists(_txIndex) notExecuted(_txIndex) {
         require(approved[_txIndex][msg.sender], "TX_NOT_CONFIRMED");
 
         approved[_txIndex][msg.sender] = false;
@@ -157,9 +175,9 @@ contract MultiSignWallet {
         return owners;
     }
 
-    function getTransactionCount() public view returns (uint256) {
+    /*function getTransactionCount() public view returns (uint256) {
         return transactions.length;
-    }
+    }*/
 
     function getTransaction(uint256 _txIndex)
         public
