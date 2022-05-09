@@ -38,8 +38,8 @@ contract MultiSignWallet {
         _;
     }
 
-    modifier txApproved(uint256 _txIndex, address owner) {
-        require(approved[_txIndex][owner]);
+    modifier txApproved(uint256 _txIndex, address _owner) {
+        require(approved[_txIndex][_owner]);
         _;
     }
 
@@ -95,7 +95,7 @@ contract MultiSignWallet {
         uint256 _value,
         bytes calldata _data
     ) public onlyOwner returns (uint256 _txIndex) {
-        //console.log(txIndex);
+        //console.log(_txIndex); // This to be removed at the final stage
         _txIndex = addTransaction(_to, _value, _data);
         emit Submit(_txIndex);
         approveTx(_txIndex);
