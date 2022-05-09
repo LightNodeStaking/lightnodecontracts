@@ -6,7 +6,7 @@ const { noop } = require("lodash");
 
 describe("Multi- Signature Wallet Testing", function () {
     let multiSignWallet, tokenMock;
-
+    let decimal = 1e18
     //Table
     ta = new Table({
         head: ['Contracts', 'contract addresses'],
@@ -24,7 +24,8 @@ describe("Multi- Signature Wallet Testing", function () {
         multiSignWallet = await contractWallet.connect(ownerAcc1).deploy(owners, required);
         const mockToken = await hre.ethers.getContractFactory("Mocktoken");
         tokenMock = await mockToken.connect(mockCoin).deploy(mockCoin.address);
-
+        let tokenvalue = (10000 * decimal).toString();
+        await tokenMock.transfer(multiSignWallet.address, tokenvalue);
         ta.push(
             ['Owner 1 Address is: ', ownerAcc1.address],
             ['Contract deployed at: ', multiSignWallet.address],
@@ -105,7 +106,7 @@ describe("Multi- Signature Wallet Testing", function () {
         await multiSignWallet.connect(ownerAcc1).addOwner(addOwners, required);
 
         let ownerList = [ownerAcc1.address, ownerAcc2.address, ownerAcc3.address, ownerAcc4.address]
-        let value = "1"
+        let value = (1 * decimal).toString();
 
         console.log('Submit Tx / Approve Tx / Execute Tx - First Transaction: ')
         //Submit Transaction and event

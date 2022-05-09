@@ -34,12 +34,13 @@ contract MultiSignWallet {
     }
 
     modifier txExists(uint256 _txIndex) {
-        require(transactions[_txIndex]._to != 0, "TX_NOT_EXIST");
+        require(transactions[_txIndex].to != address(0), "TX_NOT_EXIST");
         _;
     }
 
     modifier txApproved(uint256 _txIndex, address owner) {
-        require(approved[_txIndex][owner])
+        require(approved[_txIndex][owner]);
+        _;
     }
 
     modifier notExecuted(uint256 _txIndex) {
@@ -95,53 +96,38 @@ contract MultiSignWallet {
         bytes calldata _data
     ) public onlyOwner returns (uint256 _txIndex) {
         //console.log(txIndex);
-        txIndex = addTransaction[_to,_value, _data];
-        approve(_txIndex);
+        _txIndex = addTransaction(_to, _value, _data);
         emit Submit(_txIndex);
+        approveTx(_txIndex);
     }
 
-    function addTransaction(
-        address _to,
-        uint256 _value,
-        bytes _data
-    ) internal returns (uint256 txIndex) {
-        transactionId = transactionCount;
-        transactions[txIndex] = Transaction({
-            to: _to,
-            value: _value,
-            data: _data,
-            executed: false
-        });
-    }
-
-    function approve(uint256 _txIndex)
-        external
+    function approveTx(uint256 _txIndex)
+        public
         onlyOwner
         txExists(_txIndex)
         notExecuted(_txIndex)
         notApproved(_txIndex)
     {
         approved[_txIndex][msg.sender] = true;
-        execute(uint256 _txIndex);
         emit Approve(msg.sender, _txIndex);
+        executeTx(_txIndex);
     }
 
-
-
-    function _getApprovalCount(uint256 _txIndex)
-        private
-        view
-        returns (uint256 count)
-    {
-        for (uint256 i; i < owners.length; i++) {
-            if (approved[_txIndex][owners[i]]) {
-                count += 1;
-            }
-        }
-    }
-
-    function execute(uint256 _txIndex)
+    function revokeTx(uint256 _txIndex)
         external
+        onlyOwner
+        txExists(_txIndex)
+        notExecuted(_txIndex)
+    {
+        require(approved[_txIndex][msg.sender], "TX_NOT_CONFIRMED");
+
+        approved[_txIndex][msg.sender] = false;
+
+        emit Revoke(msg.sender, _txIndex);
+    }
+
+    function executeTx(uint256 _txIndex)
+        public
         onlyOwner
         txExists(_txIndex)
         txApproved(_txIndex, msg.sender)
@@ -162,13 +148,30 @@ contract MultiSignWallet {
         emit Execute(msg.sender, _txIndex);
     }
 
+    function addTransaction(
+        address _to,
+        uint256 _value,
+        bytes memory _data
+    ) internal returns (uint256 _txIndex) {
+        //transactionId = transactionCount;
+        transactions[_txIndex] = Transaction({
+            to: _to,
+            value: _value,
+            data: _data,
+            executed: false
+        });
+    }
 
-    function revoke(uint256 _txIndex) external onlyOwner txExists(_txIndex) notExecuted(_txIndex) {
-        require(approved[_txIndex][msg.sender], "TX_NOT_CONFIRMED");
-
-        approved[_txIndex][msg.sender] = false;
-
-        emit Revoke(msg.sender, _txIndex);
+    function _getApprovalCount(uint256 _txIndex)
+        private
+        view
+        returns (uint256 count)
+    {
+        for (uint256 i; i < owners.length; i++) {
+            if (approved[_txIndex][owners[i]]) {
+                count += 1;
+            }
+        }
     }
 
     function getOwners() public view returns (address[] memory) {
