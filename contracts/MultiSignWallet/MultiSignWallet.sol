@@ -178,9 +178,9 @@ contract MultiSignWallet {
         return owners;
     }
 
-    /*function getTransactionCount() public view returns (uint256) {
+    function getTransactionCount() public view returns (uint256) {
         return transactions.length;
-    }*/
+    }
 
     function getTransaction(uint256 _txIndex)
         public
