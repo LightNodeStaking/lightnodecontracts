@@ -7,9 +7,10 @@ import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "../lib/UnStructuredData.sol";
 import "../lib/MemoryUtils.sol";
+import "../Helper/ArrConversion";
 import "solidity-bytes-utils/contracts/BytesLib.sol";
 
-contract NodeOperatorsRegistry is INodeOperatorsRegistry, AccessControl{
+contract NodeOperatorsRegistry is INodeOperatorsRegistry, AccessControl, ArrConversion{
     using SafeMath for uint256;
     using UnStructuredData for bytes32;
 
@@ -108,7 +109,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AccessControl{
 
     }
 
-    function setNodeOpeartorActive(uint _id, bool _active) external onlyRole(SET_NODE_OPERATOR_ACTIVE_ROLE) operatorExists(_id){
+    function setNodeOperatorActive(uint _id, bool _active) external onlyRole(SET_NODE_OPERATOR_ACTIVE_ROLE) operatorExists(_id){
         _increaseKeysOpIndex();
 
         if(operators[_id].active != _active){
