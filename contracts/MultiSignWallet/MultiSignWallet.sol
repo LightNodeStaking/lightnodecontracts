@@ -15,10 +15,12 @@ contract MultiSignWallet {
     address[] public owners;
     mapping(address => bool) public isOwner;
     uint256 public required;
+    uint256 public txCount;
 
     // mapping from tx index => owner => bool
     mapping(uint256 => mapping(address => bool)) public approved;
     mapping(uint256 => Transaction) public transactions;
+    mapping(uint256 => bool) public isExecuted;
     //Transaction[] public transactions;
 
     struct Transaction {
@@ -145,6 +147,8 @@ contract MultiSignWallet {
         );
         require(success, "TX_FAILED");
 
+        isExecuted[_txIndex] = true;
+
         emit Execute(msg.sender, _txIndex);
     }
 
@@ -153,13 +157,14 @@ contract MultiSignWallet {
         uint256 _value,
         bytes memory _data
     ) internal returns (uint256 _txIndex) {
-        //transactionId = transactionCount;
+        _txIndex = txCount;
         transactions[_txIndex] = Transaction({
             to: _to,
             value: _value,
             data: _data,
             executed: false
         });
+        txCount += 1;
     }
 
     function _getApprovalCount(uint256 _txIndex)
@@ -178,8 +183,14 @@ contract MultiSignWallet {
         return owners;
     }
 
-    function getTransactionCount() public view returns (uint256) {
-        return transactions.length;
+    function getTransactionCount(uint256 _txIndex)
+        public
+        view
+        returns (uint256 count)
+    {
+        for (uint256 i = 0; i < owners.length; i++)
+            require(isExecuted[_txIndex], "NOT_EXECUTED");
+        count += 1;
     }
 
     function getTransaction(uint256 _txIndex)
