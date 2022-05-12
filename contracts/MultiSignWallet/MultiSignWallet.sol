@@ -97,7 +97,7 @@ contract MultiSignWallet {
         uint256 _value,
         bytes calldata _data
     ) public onlyOwner returns (uint256 _txIndex) {
-        //console.log(_txIndex); // This to be removed at the final stage
+        console.log("Submit Tx: ", _txIndex); // This to be removed at the final stage
         _txIndex = addTransaction(_to, _value, _data);
         emit Submit(_txIndex);
         approveTx(_txIndex);
@@ -110,6 +110,7 @@ contract MultiSignWallet {
         notExecuted(_txIndex)
         notApproved(_txIndex)
     {
+        console.log("Approce Tx: ", _txIndex); // This to be removed at the final stage
         approved[_txIndex][msg.sender] = true;
         emit Approve(msg.sender, _txIndex);
         executeTx(_txIndex);
@@ -135,6 +136,7 @@ contract MultiSignWallet {
         txApproved(_txIndex, msg.sender)
         notExecuted(_txIndex)
     {
+        console.log("Execute Tx: ", _txIndex); // This to be removed at the final stage
         require(_getApprovalCount(_txIndex) >= required, "NOT_ENOUGH_APPROVAL");
 
         Transaction storage transaction = transactions[_txIndex];

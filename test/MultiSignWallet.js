@@ -2,7 +2,7 @@ const { expect } = require("chai");
 const { ethers } = require("hardhat");
 const { expectRevert } = require('@openzeppelin/test-helpers');
 const Table = require("cli-table3");
-const { noop } = require("lodash");
+const BigNumber = require('big-number');
 
 describe("Multi- Signature Wallet Testing", function () {
     let multiSignWallet, tokenMock;
@@ -15,24 +15,33 @@ describe("Multi- Signature Wallet Testing", function () {
 
     beforeEach(async function () {
 
-        [ownerAcc1, ownerAcc2, ownerAcc3, ownerAcc4, notOwner, mockCoin] = await ethers.getSigners();
+        [ownerAcc1, ownerAcc2, ownerAcc3, ownerAcc4, notOwner, mockCoin, toAdddress1, toAdddress2, toAdddress3, toAdddress4] = await ethers.getSigners();
 
         let owners = [ownerAcc1.address, ownerAcc2.address];
         let required = 2;
 
         const contractWallet = await hre.ethers.getContractFactory("MultiSignWallet");
         multiSignWallet = await contractWallet.connect(ownerAcc1).deploy(owners, required);
+
         const mockToken = await hre.ethers.getContractFactory("Mocktoken");
         tokenMock = await mockToken.connect(mockCoin).deploy(mockCoin.address);
-        let tokenvalue = (10000 * decimal).toString();
-        await tokenMock.transfer(multiSignWallet.address, tokenvalue);
+
+        let tokenvalue = BigNumber(1000).mult(1e18)
+        await tokenMock.transfer(multiSignWallet.address, tokenvalue.toString());
+
+        console.log("Amount of token: " + tokenvalue)
+
         ta.push(
-            ['Owner 1 Address is: ', ownerAcc1.address],
             ['Contract deployed at: ', multiSignWallet.address],
+            ['Owner 1 Address is: ', ownerAcc1.address],
             ['Owner 2 Address is: ', ownerAcc2.address],
             ['Owner 3 Address is: ', ownerAcc3.address],
             ['Owner 4 Address is: ', ownerAcc4.address],
-            ['Not Owner Address is: ', notOwner.address]
+            ['Not Owner Address is: ', notOwner.address],
+            ['To 1 Address is: ', toAdddress1.address],
+            ['To 2 Address is: ', toAdddress2.address],
+            ['To 3 Address is: ', toAdddress3.address],
+            ['To 4 Address is: ', toAdddress4.address]
         )
     })
 
@@ -47,17 +56,8 @@ describe("Multi- Signature Wallet Testing", function () {
         owners = [ownerAcc1.address, ownerAcc2.address];
         await expect(multiSignWallet.connect(ownerAcc1).addOwner(addOwners, required)).to.emit(multiSignWallet, "AddOwner").withArgs(ownerAcc1.address, addOwners[0, 1]);
 
-        const ownerOne = await multiSignWallet.owners(0)
-        console.log("Owner 1 is: ", ownerOne)
-
-        const ownerTwo = await multiSignWallet.owners(1)
-        console.log("Owner 2 is: ", ownerTwo)
-
-        const ownerThree = await multiSignWallet.owners(2)
-        console.log("Owner 3 is: ", ownerThree)
-
-        const ownerFour = await multiSignWallet.owners(3)
-        console.log("Owner 4 is: ", ownerFour)
+        let getOwners = await multiSignWallet.getOwners();
+        console.log("Owner List: ", getOwners);
 
         // remove Owners
         await expect(multiSignWallet.connect(ownerAcc1).removeOwner(ownerAcc3.address)).to.emit(multiSignWallet, "RemoveOwner").withArgs(owners[0], addOwners[0]);
@@ -67,39 +67,46 @@ describe("Multi- Signature Wallet Testing", function () {
         console.log("Remove Owner 3: ", removeOwnerThree)
         const removeOwnerFour = await multiSignWallet.owners(3)
         console.log("Remove Owner 4: ", removeOwnerFour)
-
     })
 
     it('Submit Tx / Approve Tx / Revoke Tx', async function () {
         //add Owners
-        let required = 2;
+        let required, ownerList, valueTo;
         let addOwners = [ownerAcc3.address, ownerAcc4.address]
-        await multiSignWallet.connect(ownerAcc1).addOwner(addOwners, required);
+        required = 2;
 
-        let ownerList = [ownerAcc1.address, ownerAcc2.address, ownerAcc3.address, ownerAcc4.address]
+        await multiSignWallet.connect(ownerAcc1).addOwner(addOwners, required);
+        ownerList = [ownerAcc1.address, ownerAcc2.address, ownerAcc3.address, ownerAcc4.address]
 
         //Submit Transaction
         console.log("Submiting Transaction")
-        await expect(multiSignWallet.connect(ownerAcc1).submitTx(ownerAcc1.address, 0, "0x00")).to.emit(multiSignWallet, "Submit").withArgs(0);
-        await expectRevert.unspecified(multiSignWallet.connect(notOwner).submitTx(ownerAcc2.address, 1, "0x00"));
-        await expectRevert.unspecified(multiSignWallet.connect(ownerAcc1).submitTx(notOwner.address, 0, "0x00"));
-        //await multiSignWallet.connect(notOwner).submitTx(ownerAcc1.address, 0, "0x00");
-        //await multiSignWallet.connect(ownerAcc1).submitTx(notOwner.address, 0, "0x00");
+        valueTo = '10'
+        dataTo = '0x00'
+        let getOwners = await multiSignWallet.getOwners();
+        console.log("Owner List: ", getOwners);
+        await expect(multiSignWallet.connect(ownerAcc1).submitTx(toAdddress1.address, valueTo, "0x00")).to.emit(multiSignWallet, "Submit").withArgs(0);
+        await expect(multiSignWallet.connect(ownerAcc2).approveTx(0)).to.emit(multiSignWallet, "Execute").withArgs(0);
+        await expect(multiSignWallet.connect(ownerAcc3).approveTx(0)).to.emit(multiSignWallet, "Execute").withArgs(0);
+        // //await expect(multiSignWallet.connect(ownerAcc4).approveTx(0)).to.emit(multiSignWallet, "Execute").withArgs(0);
+        // await expectRevert.unspecified(multiSignWallet.connect(notOwner).submitTx(ownerAcc2.address, 1, "0x00"));
+        // await expectRevert.unspecified(multiSignWallet.connect(ownerAcc1).submitTx(notOwner.address, 0, "0x00"));
+        // //await multiSignWallet.connect(notOwner).submitTx(ownerAcc1.address, 0, "0x00");
+        // //await multiSignWallet.connect(ownerAcc1).submitTx(notOwner.address, 0, "0x00");
 
         //Approve Transaction
-        console.log("Approve Transaction")
-        await expect(multiSignWallet.connect(ownerAcc2).approve(0)).to.emit(multiSignWallet, "Approve").withArgs(ownerList[1], 0);
-        await expect(multiSignWallet.connect(ownerAcc3).approve(0)).to.emit(multiSignWallet, "Approve").withArgs(ownerList[2], 0);
-        await expectRevert.unspecified(multiSignWallet.connect(ownerAcc2).approve(0));
-        await expectRevert.unspecified(multiSignWallet.connect(notOwner).approve(0));
+        // console.log("Approve Transaction")
+        // await expect(multiSignWallet.connect(ownerAcc2).approve(0)).to.emit(multiSignWallet, "Approve").withArgs(ownerList[1], 0);
+        // await expect(multiSignWallet.connect(ownerAcc3).approve(0)).to.emit(multiSignWallet, "Approve").withArgs(ownerList[2], 0);
+        // await expectRevert.unspecified(multiSignWallet.connect(ownerAcc2).approve(0));
+        // await expectRevert.unspecified(multiSignWallet.connect(notOwner).approve(0));
 
-        //Revoke Transaction
-        console.log("Revoke Transaction")
-        await multiSignWallet.connect(ownerAcc2).revoke(0)
+        // //Revoke Transaction
+        // console.log("Revoke Transaction")
+        // await multiSignWallet.connect(ownerAcc2).revoke(0)
 
     })
 
-    it('Exceute Txs', async function () {
+    /*it('Exceute Txs', async function () {
         //add Owners
         let required = 2;
         let addOwners = [ownerAcc3.address, ownerAcc4.address]
@@ -158,6 +165,6 @@ describe("Multi- Signature Wallet Testing", function () {
 
         // let transactionCount = await multiSignWallet.getTransactionCount();
         // console.log("Transaction Count List: ", transactionCount);
-    })
+    })*/
 
 })
