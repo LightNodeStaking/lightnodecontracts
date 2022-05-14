@@ -10,6 +10,7 @@ contract MultiSignWallet {
     event Approve(address indexed owner, uint256 indexed txIndex);
     event Revoke(address indexed owner, uint256 indexed txIndex);
     event Execute(address indexed owner, uint256 indexed txIndex);
+    event ExecuteFailed(uint256 indexed txIndex);
 
     address public owner;
     address[] public owners;
@@ -110,8 +111,9 @@ contract MultiSignWallet {
         notExecuted(_txIndex)
         notApproved(_txIndex)
     {
-        console.log("Approce Tx: ", _txIndex); // This to be removed at the final stage
+        console.log("Approve Tx: ", _txIndex); // This to be removed at the final stage
         approved[_txIndex][msg.sender] = true;
+        console.log("Approved by owner: ", msg.sender); // This to be removed at the final stage
         emit Approve(msg.sender, _txIndex);
         executeTx(_txIndex);
     }
@@ -137,21 +139,29 @@ contract MultiSignWallet {
         notExecuted(_txIndex)
     {
         console.log("Execute Tx: ", _txIndex); // This to be removed at the final stage
-        require(_getApprovalCount(_txIndex) >= required, "NOT_ENOUGH_APPROVAL");
-
+        console.log("Required approval: ", required);
+        console.log("Approved: ", isTxApproved(_txIndex));
         Transaction storage transaction = transactions[_txIndex];
-        console.log("Transaction Index: ", _txIndex);
-        console.log("Transaction value: ", transaction.value);
+        // transaction.executed = true;
+        // (bool success, ) = transaction.to.call{value: transaction.value}(
+        //     transaction.data
+        // );
+        // require(success, "TX_FAILED");
+        // isExecuted[_txIndex] = true;
+        // emit Execute(msg.sender, _txIndex);
 
-        transaction.executed = true;
-        (bool success, ) = transaction.to.call{value: transaction.value}(
-            transaction.data
-        );
-        require(success, "TX_FAILED");
-
-        isExecuted[_txIndex] = true;
-
-        emit Execute(msg.sender, _txIndex);
+        if (isTxApproved(_txIndex)) {
+            transaction.executed = true;
+            (bool success, ) = transaction.to.call{value: transaction.value}(
+                transaction.data
+            );
+            require(success, "TX_FAILED");
+            isExecuted[_txIndex] = true;
+            emit Execute(msg.sender, _txIndex);
+        } else {
+            emit ExecuteFailed(_txIndex);
+            transaction.executed = false;
+        }
     }
 
     function addTransaction(
@@ -169,17 +179,27 @@ contract MultiSignWallet {
         txCount += 1;
     }
 
-    function _getApprovalCount(uint256 _txIndex)
-        private
-        view
-        returns (uint256 count)
-    {
-        for (uint256 i; i < owners.length; i++) {
+    function isTxApproved(uint256 _txIndex) public view returns (bool) {
+        uint256 count = 0;
+        for (uint256 i = 0; i < owners.length; i++) {
             if (approved[_txIndex][owners[i]]) {
                 count += 1;
+                if (count == required) return true;
             }
         }
     }
+
+    // function _getApprovalCount(uint256 _txIndex)
+    //     private
+    //     view
+    //     returns (uint256 count)
+    // {
+    //     for (uint256 i; i < owners.length; i++) {
+    //         if (approved[_txIndex][owners[i]]) {
+    //             count += 1;
+    //         }
+    //     }
+    // }
 
     function getOwners() public view returns (address[] memory) {
         return owners;
