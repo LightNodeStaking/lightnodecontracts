@@ -50,8 +50,8 @@ describe("Multi- Signature Wallet Testing", function () {
     })
 
     it('Adding Owners/Removing Owners', async function () {
-        // //add Owners
-        // let required = 2;
+        //add Owners
+        // let required = 1;
         // let addOwners = [ownerAcc3.address, ownerAcc4.address]
         // owners = [ownerAcc1.address, ownerAcc2.address];
         // await expect(multiSignWallet.connect(ownerAcc1).addOwner(addOwners, required)).to.emit(multiSignWallet, "AddOwner").withArgs(ownerAcc1.address, addOwners[0, 1]);
@@ -59,7 +59,7 @@ describe("Multi- Signature Wallet Testing", function () {
         // let getOwners = await multiSignWallet.getOwners();
         // console.log("Owner List: ", getOwners);
 
-        // // remove Owners
+        // remove Owners //un comment this to remove owners
         // await expect(multiSignWallet.connect(ownerAcc1).removeOwner(ownerAcc3.address)).to.emit(multiSignWallet, "RemoveOwner").withArgs(owners[0], addOwners[0]);
         // await expect(multiSignWallet.connect(ownerAcc1).removeOwner(ownerAcc4.address)).to.emit(multiSignWallet, "RemoveOwner").withArgs(owners[0], addOwners[1]);
 
@@ -67,8 +67,7 @@ describe("Multi- Signature Wallet Testing", function () {
 
     it('Submit Tx / Approve Tx / Execute Tx', async function () {
         //add Owners
-        let required, ownerList, valueTo, txIndex;
-        required = 3;
+        let ownerList, valueTo, txIndex;
         ownerList = [ownerAcc1.address, ownerAcc2.address, ownerAcc3.address, ownerAcc4.address]
 
         //Submit Transaction

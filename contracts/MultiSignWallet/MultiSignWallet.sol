@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
-import "hardhat/console.sol";
 
 contract MultiSignWallet {
     event AddOwner(address indexed owner, address indexed NewOwner);
     event RemoveOwner(address indexed owner, address indexed removedOwner);
+    event RequirementChange(uint256 requiredApproval);
     event Deposit(address indexed sender, uint256 amount, uint256 balance);
     event Submit(uint256 indexed txIndex);
     event Approve(address indexed owner, uint256 indexed txIndex);
@@ -77,7 +77,6 @@ contract MultiSignWallet {
         }
 
         required = _required;
-
         emit AddOwner(msg.sender, owner);
     }
 
@@ -92,18 +91,18 @@ contract MultiSignWallet {
         emit RemoveOwner(msg.sender, _owner);
     }
 
-    function changeRequirement(uint256 _required) public onlyOwner {
-        required = _required;
-        RequirementChange(_required);
-    }
+    //Further discussion is required, need a Max owner number;
+
+    // function changeRequirement(uint256 _required) public onlyOwner {
+    //     required = _required;
+    //     emit RequirementChange(_required);
+    // }
 
     function submitTx(
         address _to,
         uint256 _value,
         bytes calldata _data
     ) public onlyOwner returns (uint256 _txIndex) {
-        console.log("Submit Tx: ", _txIndex); // This to be removed at the final stage
-        console.log("Submit Tx: ", msg.sender); // This to be removed at the final stage
         _txIndex = addTransaction(_to, _value, _data);
         emit Submit(_txIndex);
         approveTx(_txIndex);
@@ -116,12 +115,12 @@ contract MultiSignWallet {
         notExecuted(_txIndex)
         notApproved(_txIndex)
     {
-        console.log("Approve Tx: ", _txIndex); // This to be removed at the final stage
         approved[_txIndex][msg.sender] = true;
-        console.log("Approved by owner: ", msg.sender); // This to be removed at the final stage
         emit Approve(msg.sender, _txIndex);
         executeTx(_txIndex);
     }
+
+    //Further discussion is required.
 
     // function revokeTx(uint256 _txIndex)
     //     public
@@ -148,21 +147,9 @@ contract MultiSignWallet {
         txApproved(_txIndex, msg.sender)
         notExecuted(_txIndex)
     {
-        console.log("Execute Tx: ", _txIndex); // This to be removed at the final stage
-        console.log("Required approval: ", required); // This to be removed at the final stage
-        console.log("Approved: ", isTxApproved(_txIndex)); // This to be removed at the final stage
-
         Transaction storage transaction = transactions[_txIndex];
 
         if (isTxApproved(_txIndex)) {
-            // transaction.executed = true;
-            address add = transaction.to;
-            console.log("Sending to: ", add);
-            console.log("Value of ether: ", transaction.value);
-            console.logBytes(transaction.data);
-
-            console.log("Tx executed before: ", transaction.executed);
-
             (bool success, ) = transaction.to.call{value: transaction.value}(
                 transaction.data
             );
@@ -174,8 +161,6 @@ contract MultiSignWallet {
             emit ExecuteFailed(_txIndex);
             transaction.executed = false;
         }
-        console.log("Tx Executed after: ", transaction.executed);
-        console.log("Tx executed by owner: ", msg.sender);
     }
 
     function addTransaction(
