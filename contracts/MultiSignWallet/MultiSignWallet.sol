@@ -92,6 +92,11 @@ contract MultiSignWallet {
         emit RemoveOwner(msg.sender, _owner);
     }
 
+    function changeRequirement(uint256 _required) public onlyOwner {
+        required = _required;
+        RequirementChange(_required);
+    }
+
     function submitTx(
         address _to,
         uint256 _value,
