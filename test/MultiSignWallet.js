@@ -65,7 +65,7 @@ describe("Multi- Signature Wallet Testing", function () {
 
     })
 
-    it('Submit Tx / Approve Tx / Revoke Tx / Execute Tx', async function () {
+    it('Submit Tx / Approve Tx / Execute Tx', async function () {
         //add Owners
         let required, ownerList, valueTo, txIndex;
         required = 3;
@@ -78,16 +78,18 @@ describe("Multi- Signature Wallet Testing", function () {
         valueData = "0x00";
         txIndex = 0;
 
-        await expectRevert.unspecified(multiSignWallet.connect(notOwner).submitTx(toAdddress1.address, valueTo, valueData));
+        await expectRevert.unspecified(multiSignWallet.connect(notOwner).submitTx(toAdddress1.address, valueTo, valueData)); //Not_Owner try to submit tx - fails
         await expect(multiSignWallet.connect(ownerAcc1).submitTx(toAdddress1.address, valueTo, valueData)).to.emit(multiSignWallet, "Submit").withArgs(txIndex);
         await expect(multiSignWallet.connect(ownerAcc2).approveTx(txIndex)).to.emit(multiSignWallet, "Approve").withArgs(ownerList[1], txIndex);
         await expect(multiSignWallet.connect(ownerAcc3).approveTx(txIndex)).to.emit(multiSignWallet, "Approve").withArgs(ownerList[2], txIndex);
-        //await expect(multiSignWallet.connect(ownerAcc1).revokeTx(txIndex)).to.emit(multiSignWallet, "Revoke").withArgs(ownerList[0], txIndex);
-        //await expect(multiSignWallet.connect(ownerAcc1).executeTx(txIndex)).to.emit(multiSignWallet, "Execute").withArgs(ownerList[0], txIndex);
+
+        await expectRevert.unspecified(multiSignWallet.connect(notOwner).approveTx(txIndex)); // Not Owner Try to approve Tx - failed
+        await expectRevert.unspecified(multiSignWallet.connect(notOwner).executeTx(txIndex)); // Not Owner try to Execute Tx - failed
+
         let txDetails = await multiSignWallet.getTransaction(txIndex);
         console.log("Tx 0 details: ", txDetails);
-        // let exe = await multiSignWallet.isExecuted(txIndex)
-        // console.log("Tx executed testing: ", exe);
+        let exe = await multiSignWallet.isExecuted(txIndex)
+        console.log("Tx executed testing: ", exe);
 
         console.log(('Transaction 1 submit, approve, execute: '))
         valueTo = ethers.utils.parseEther('10'); //sending 10 ether to address
@@ -98,12 +100,17 @@ describe("Multi- Signature Wallet Testing", function () {
         await expect(multiSignWallet.connect(ownerAcc1).submitTx(toAdddress1.address, valueTo, valueData)).to.emit(multiSignWallet, "Submit").withArgs(txIndex);
         await expect(multiSignWallet.connect(ownerAcc2).approveTx(txIndex)).to.emit(multiSignWallet, "Approve").withArgs(ownerList[1], txIndex);
         await expect(multiSignWallet.connect(ownerAcc4).approveTx(txIndex)).to.emit(multiSignWallet, "Approve").withArgs(ownerList[3], txIndex);
-        //await expect(multiSignWallet.connect(ownerAcc1).revokeTx(txIndex)).to.emit(multiSignWallet, "Revoke").withArgs(ownerList[0], txIndex);
+
+        await expectRevert.unspecified(multiSignWallet.connect(notOwner).approveTx(txIndex)); // Not Owner Try to approve Tx - failed
+        await expectRevert.unspecified(multiSignWallet.connect(notOwner).executeTx(txIndex)); // Not Owner try to Execute Tx - failed
+
         txDetails = await multiSignWallet.getTransaction(txIndex);
         console.log("Tx 1 details: ", txDetails);
+        exe = await multiSignWallet.isExecuted(txIndex)
+        console.log("Tx executed testing: ", exe);
 
         console.log(('Transaction 2 submit, approve, execute: '))
-        valueTo = ethers.utils.parseEther('16'); //sending 10 ether to address
+        valueTo = ethers.utils.parseEther('16'); //sending 16 ether to address
         valueData = "0x11";
         txIndex = 2;
 
@@ -111,12 +118,17 @@ describe("Multi- Signature Wallet Testing", function () {
         await expect(multiSignWallet.connect(ownerAcc1).submitTx(toAdddress1.address, valueTo, valueData)).to.emit(multiSignWallet, "Submit").withArgs(txIndex);
         await expect(multiSignWallet.connect(ownerAcc2).approveTx(txIndex)).to.emit(multiSignWallet, "Approve").withArgs(ownerList[1], txIndex);
         await expect(multiSignWallet.connect(ownerAcc4).approveTx(txIndex)).to.emit(multiSignWallet, "Approve").withArgs(ownerList[3], txIndex);
-        //await expect(multiSignWallet.connect(ownerAcc1).revokeTx(txIndex)).to.emit(multiSignWallet, "Revoke").withArgs(ownerList[0], txIndex);
+
+        await expectRevert.unspecified(multiSignWallet.connect(notOwner).approveTx(txIndex)); // Not Owner Try to approve Tx - failed
+        await expectRevert.unspecified(multiSignWallet.connect(notOwner).executeTx(txIndex)); // Not Owner try to Execute Tx - failed
+
         txDetails = await multiSignWallet.getTransaction(txIndex);
         console.log("Tx 2 details: ", txDetails);
+        exe = await multiSignWallet.isExecuted(txIndex)
+        console.log("Tx executed testing: ", exe);
 
         console.log(('Transaction 3 submit, approve, execute: '))
-        valueTo = ethers.utils.parseEther('25'); //sending 10 ether to address
+        valueTo = ethers.utils.parseEther('25'); //sending 25 ether to address
         valueData = "0x25";
         txIndex = 3;
 
@@ -124,9 +136,14 @@ describe("Multi- Signature Wallet Testing", function () {
         await expect(multiSignWallet.connect(ownerAcc1).submitTx(toAdddress1.address, valueTo, valueData)).to.emit(multiSignWallet, "Submit").withArgs(txIndex);
         await expect(multiSignWallet.connect(ownerAcc2).approveTx(txIndex)).to.emit(multiSignWallet, "Approve").withArgs(ownerList[1], txIndex);
         await expect(multiSignWallet.connect(ownerAcc4).approveTx(txIndex)).to.emit(multiSignWallet, "Approve").withArgs(ownerList[3], txIndex);
-        //await expect(multiSignWallet.connect(ownerAcc1).revokeTx(txIndex)).to.emit(multiSignWallet, "Revoke").withArgs(ownerList[0], txIndex);
+
+        await expectRevert.unspecified(multiSignWallet.connect(notOwner).approveTx(txIndex)); // Not Owner Try to approve Tx - failed
+        await expectRevert.unspecified(multiSignWallet.connect(notOwner).executeTx(txIndex)); // Not Owner try to Execute Tx - failed
+
         txDetails = await multiSignWallet.getTransaction(txIndex);
         console.log("Tx 3 details: ", txDetails);
+        exe = await multiSignWallet.isExecuted(txIndex)
+        console.log("Tx executed testing: ", exe);
 
     })
 

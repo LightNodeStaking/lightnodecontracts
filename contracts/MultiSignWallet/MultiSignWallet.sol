@@ -22,7 +22,6 @@ contract MultiSignWallet {
     mapping(uint256 => mapping(address => bool)) public approved;
     mapping(uint256 => Transaction) public transactions;
     mapping(uint256 => bool) public isExecuted;
-    //Transaction[] public transactions;
 
     struct Transaction {
         address to;
@@ -119,18 +118,23 @@ contract MultiSignWallet {
         executeTx(_txIndex);
     }
 
-    function revokeTx(uint256 _txIndex)
-        external
-        onlyOwner
-        txExists(_txIndex)
-        notExecuted(_txIndex)
-    {
-        require(approved[_txIndex][msg.sender], "TX_NOT_CONFIRMED");
+    // function revokeTx(uint256 _txIndex)
+    //     public
+    //     onlyOwner
+    //     txExists(_txIndex)
+    //     notExecuted(_txIndex)
+    // {
+    //     //require(isSubmitted[_txIndex], "TX_NOT_SUBMITTED");
+    //     require(approved[_txIndex][msg.sender], "TX_NOT_APPROVED");
+    //     isRevoked[_txIndex] = true;
+    //     approved[_txIndex][msg.sender] = false;
+    //     console.log("revoke Tx: ", _txIndex); // This to be removed at the final stage
+    //     emit Revoke(msg.sender, _txIndex);
 
-        approved[_txIndex][msg.sender] = false;
-        console.log("revoke Tx: ", _txIndex); // This to be removed at the final stage
-        emit Revoke(msg.sender, _txIndex);
-    }
+    //     if (!isRevoked[_txIndex]) {
+    //         executeTx(_txIndex);
+    //     }
+    // }
 
     function executeTx(uint256 _txIndex)
         public
