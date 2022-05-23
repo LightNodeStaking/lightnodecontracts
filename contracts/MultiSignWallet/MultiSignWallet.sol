@@ -91,12 +91,11 @@ contract MultiSignWallet {
         emit RemoveOwner(msg.sender, _owner);
     }
 
-    //Further discussion is required, need a Max owner number;
-
-    // function changeRequirement(uint256 _required) public onlyOwner {
-    //     required = _required;
-    //     emit RequirementChange(_required);
-    // }
+    function changeRequirement(uint256 _required) public onlyOwner {
+        require(_required <= owners.length && _required != 0);
+        required = _required;
+        emit RequirementChange(_required);
+    }
 
     function submitTx(
         address _to,
@@ -119,26 +118,6 @@ contract MultiSignWallet {
         emit Approve(msg.sender, _txIndex);
         executeTx(_txIndex);
     }
-
-    //Further discussion is required.
-
-    // function revokeTx(uint256 _txIndex)
-    //     public
-    //     onlyOwner
-    //     txExists(_txIndex)
-    //     notExecuted(_txIndex)
-    // {
-    //     //require(isSubmitted[_txIndex], "TX_NOT_SUBMITTED");
-    //     require(approved[_txIndex][msg.sender], "TX_NOT_APPROVED");
-    //     isRevoked[_txIndex] = true;
-    //     approved[_txIndex][msg.sender] = false;
-    //     console.log("revoke Tx: ", _txIndex); // This to be removed at the final stage
-    //     emit Revoke(msg.sender, _txIndex);
-
-    //     if (!isRevoked[_txIndex]) {
-    //         executeTx(_txIndex);
-    //     }
-    // }
 
     function executeTx(uint256 _txIndex)
         public
