@@ -7,9 +7,6 @@ import "@openzeppelin/contracts/security/Pausable.sol";
 //import "@openzeppelin/contracts/utils/Context.sol";
 
 contract SLETH is Pausable, IERC20 {
-    // string public name ="Lightnode staked Ether";
-    // string public symbol = "slETH";
-
     mapping(address => uint256) public _balances;
 
     mapping(address => mapping(address => uint256)) private _allowances;
@@ -19,11 +16,6 @@ contract SLETH is Pausable, IERC20 {
     string public _symbol = "slETH";
     uint8 public _decimal = 18;
     address public tokenAccount;
-
-    //address public ownerAddy;
-    //Events
-    //event Transfer(address indexed from, address indexed to, uint256 value);
-    //event Approval(address indexed owner , address indexed spender, uint256 value);
 
     /**
      * @dev Sets the values for {name} and {symbol}.
@@ -104,6 +96,7 @@ contract SLETH is Pausable, IERC20 {
         public
         virtual
         override
+        whenNotPaused
         returns (bool)
     {
         require(_balances[msg.sender] >= amount);
@@ -119,6 +112,7 @@ contract SLETH is Pausable, IERC20 {
         view
         virtual
         override
+        whenNotPaused
         returns (uint256)
     {
         return _allowances[owner][spender];
@@ -138,6 +132,7 @@ contract SLETH is Pausable, IERC20 {
         public
         virtual
         override
+        whenNotPaused
         returns (bool)
     {
         _approve(_msgSender(), spender, amount);
@@ -164,7 +159,7 @@ contract SLETH is Pausable, IERC20 {
         address sender,
         address recipient,
         uint256 amount
-    ) public virtual override returns (bool) {
+    ) public virtual override whenNotPaused returns (bool) {
         uint256 currentAllowance = _allowances[sender][_msgSender()];
         if (currentAllowance != type(uint256).max) {
             require(
@@ -255,7 +250,7 @@ contract SLETH is Pausable, IERC20 {
         address sender,
         address recipient,
         uint256 amount
-    ) public virtual {
+    ) public virtual whenNotPaused {
         require(sender != address(0), "ERC20: transfer from the zero address");
         require(recipient != address(0), "ERC20: transfer to the zero address");
 
@@ -285,7 +280,11 @@ contract SLETH is Pausable, IERC20 {
      *
      * - `account` cannot be the zero address.
      */
-    function _mint(address account, uint256 amount) public virtual {
+    function _mint(address account, uint256 amount)
+        public
+        virtual
+        whenNotPaused
+    {
         require(account != address(0), "ERC20: mint to the zero address");
 
         _beforeTokenTransfer(address(0), account, amount);
@@ -308,7 +307,11 @@ contract SLETH is Pausable, IERC20 {
      * - `account` cannot be the zero address.
      * - `account` must have at least `amount` tokens.
      */
-    function _burn(address account, uint256 amount) public virtual {
+    function _burn(address account, uint256 amount)
+        public
+        virtual
+        whenNotPaused
+    {
         require(account != address(0), "ERC20: burn from the zero address");
 
         _beforeTokenTransfer(account, address(0), amount);
@@ -342,7 +345,7 @@ contract SLETH is Pausable, IERC20 {
         address owner,
         address spender,
         uint256 amount
-    ) public virtual {
+    ) public virtual whenNotPaused {
         require(owner != address(0), "ERC20: approve from the zero address");
         require(spender != address(0), "ERC20: approve to the zero address");
 
