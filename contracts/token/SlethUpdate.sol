@@ -96,7 +96,6 @@ contract SLETH is Pausable, IERC20 {
         public
         virtual
         override
-        whenNotPaused
         returns (bool)
     {
         require(_balances[msg.sender] >= amount);
@@ -112,7 +111,6 @@ contract SLETH is Pausable, IERC20 {
         view
         virtual
         override
-        whenNotPaused
         returns (uint256)
     {
         return _allowances[owner][spender];
@@ -132,7 +130,6 @@ contract SLETH is Pausable, IERC20 {
         public
         virtual
         override
-        whenNotPaused
         returns (bool)
     {
         _approve(_msgSender(), spender, amount);
