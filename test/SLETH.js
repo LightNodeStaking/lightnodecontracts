@@ -96,4 +96,25 @@ describe("Sleth's tests", function () {
         await expectRevert.unspecified(slEth.connect(acc2).transferFrom(SlEthOwner.address, acc2.address, invalidAmount));
         await expectRevert.unspecified(slEth.connect(acc1).transferFrom(acc2.address, "0x0000000000000000000000000000000000000000", "100000000000000000000"))
     })
+
+    it("Pausable / Unpausable Contract testing", async function () {
+        const value = await slEth.paused();
+        expect(value).to.equal(false);
+        console.log("Contract is: ", value);
+
+        const owner = await slEth.tokenAccount();
+        console.log('Owner is: ', owner);
+
+        let recipient, amount;
+        recipient = acc1.address;
+        amount = "1000";
+
+        await expect(slEth.connect(SlEthOwner).transfer(recipient, amount));
+        amount = "50";
+        await expect(slEth.connect(SlEthOwner).approve(recipient, amount));
+        const allowance = await slEth.allowance(SlEthOwner.address, acc1.address);
+        //expect(allowance.toString()).to.equal("50");
+        console.log("balance: ", allowance.toString());
+        ;
+    })
 });
