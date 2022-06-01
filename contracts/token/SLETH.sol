@@ -216,4 +216,12 @@ contract SLETH is Pausable, IERC20 {
         address to,
         uint256 amount
     ) internal virtual {}
+
+    function pause() external {
+        _pause();
+    }
+
+    function unpause() external {
+        _unpause();
+    }
 }
