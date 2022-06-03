@@ -75,7 +75,6 @@ contract MultiSignWallet {
             isOwner[owner] = true;
             owners.push(owner);
         }
-
         required = _required;
         emit AddOwner(msg.sender, owner);
     }

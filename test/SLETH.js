@@ -96,4 +96,66 @@ describe("Sleth's tests", function () {
         await expectRevert.unspecified(slEth.connect(acc2).transferFrom(SlEthOwner.address, acc2.address, invalidAmount));
         await expectRevert.unspecified(slEth.connect(acc1).transferFrom(acc2.address, "0x0000000000000000000000000000000000000000", "100000000000000000000"))
     })
+
+    it("Pausable / Unpausable Contract testing", async function () {
+
+        console.log('When contract is unpausable: ');
+        let value = await slEth.paused();
+        expect(value).to.equal(false);
+        console.log("Is Contract Pausable: ", value);
+
+        const owner = await slEth.tokenAccount();
+        console.log('Owner is: ', owner);
+
+        await slEth.connect(SlEthOwner).transfer(acc1.address, "100");
+        await slEth.connect(SlEthOwner).approve(acc1.address, "100");
+        let allowance = await slEth.allowance(SlEthOwner.address, acc1.address)
+        expect(allowance.toString()).to.equal("100");
+        console.log("balance of acc1: ", allowance.toString());
+
+        await slEth.connect(SlEthOwner).transfer(acc2.address, "1000");
+        await slEth.connect(SlEthOwner).approve(acc2.address, "1000");
+        allowance = await slEth.allowance(SlEthOwner.address, acc2.address)
+        expect(allowance.toString()).to.equal("1000");
+        console.log("balance of acc2: ", allowance.toString());
+
+        console.log('When contract is pausable: ');
+        //making contract pausable and emmiting the event.
+        await expect(slEth.connect(SlEthOwner).pause()).to.emit(slEth, "Paused")
+        value = await slEth.paused();
+        expect(value).to.equal(true);
+        console.log("Is Contract Pausable: ", value);
+
+        await expectRevert.unspecified(slEth.connect(SlEthOwner).transfer(acc1.address, "100"));
+        await expectRevert.unspecified(slEth.connect(SlEthOwner).approve(acc1.address, "100"));
+        await expectRevert.unspecified(slEth.connect(SlEthOwner).transferFrom(SlEthOwner.address, acc1.address, "100"));
+
+        await expectRevert.unspecified(slEth.connect(SlEthOwner).transfer(acc2.address, "11210"));
+        await expectRevert.unspecified(slEth.connect(SlEthOwner).approve(acc2.address, "11210"));
+        await expectRevert.unspecified(slEth.connect(SlEthOwner).transferFrom(SlEthOwner.address, acc2.address, "11210"));
+        await expectRevert.unspecified(slEth.connect(SlEthOwner)._mint(acc1.address, "10"));
+        await expectRevert.unspecified(slEth.connect(SlEthOwner)._burn(acc1.address, "10"));
+
+        //making contract unpausable and emmiting the event.
+        console.log('When contract is unpausable: ');
+        await expect(slEth.connect(SlEthOwner).unpause()).to.emit(slEth, "Unpaused");
+        value = await slEth.paused();
+        expect(value).to.equal(false);
+        console.log("Is Contract Pausable: ", value);
+
+        await slEth.connect(SlEthOwner).transfer(acc1.address, "150");
+        await slEth.connect(SlEthOwner).approve(acc1.address, "150");
+        allowance = await slEth.allowance(SlEthOwner.address, acc1.address)
+        expect(allowance.toString()).to.equal("150");
+        console.log("balance of acc1: ", allowance.toString());
+
+        await slEth.connect(SlEthOwner).transfer(acc2.address, "1105");
+        await slEth.connect(SlEthOwner).approve(acc2.address, "1105");
+        allowance = await slEth.allowance(SlEthOwner.address, acc2.address)
+        expect(allowance.toString()).to.equal("1105");
+        console.log("balance of acc2: ", allowance.toString());
+
+        await slEth.connect(SlEthOwner)._mint(acc1.address, '10');
+        await slEth.connect(SlEthOwner)._burn(acc1.address, "10");
+    })
 });
