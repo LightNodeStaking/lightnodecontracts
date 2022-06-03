@@ -90,7 +90,6 @@ contract MultiSignWallet {
         emit RemoveOwner(msg.sender, _owner);
     }
 
-    //Further discussion is required, need a Max owner number;
 
     function changeRequirement(uint256 _required) public onlyOwner {
         require(_required <= owners.length && _required != 0);
