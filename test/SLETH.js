@@ -120,23 +120,25 @@ describe("Sleth's tests", function () {
         console.log("balance of acc2: ", allowance.toString());
 
         console.log('When contract is pausable: ');
-        await slEth.connect(SlEthOwner).pause();
+        //making contract pausable and emmiting the event.
+        await expect(slEth.connect(SlEthOwner).pause()).to.emit(slEth, "Paused")
         value = await slEth.paused();
         expect(value).to.equal(true);
         console.log("Is Contract Pausable: ", value);
 
         await expectRevert.unspecified(slEth.connect(SlEthOwner).transfer(acc1.address, "100"));
-        //await slEth.connect(SlEthOwner).transfer(acc1.address, "100");
         await expectRevert.unspecified(slEth.connect(SlEthOwner).approve(acc1.address, "100"));
         await expectRevert.unspecified(slEth.connect(SlEthOwner).transferFrom(SlEthOwner.address, acc1.address, "100"));
 
         await expectRevert.unspecified(slEth.connect(SlEthOwner).transfer(acc2.address, "11210"));
-        //await slEth.connect(SlEthOwner).transfer(acc2.address, "100");
         await expectRevert.unspecified(slEth.connect(SlEthOwner).approve(acc2.address, "11210"));
         await expectRevert.unspecified(slEth.connect(SlEthOwner).transferFrom(SlEthOwner.address, acc2.address, "11210"));
+        await expectRevert.unspecified(slEth.connect(SlEthOwner)._mint(acc1.address, "10"));
+        await expectRevert.unspecified(slEth.connect(SlEthOwner)._burn(acc1.address, "10"));
 
-        console.log('When contract is pausable again: ');
-        await slEth.connect(SlEthOwner).unpause();
+        //making contract unpausable and emmiting the event.
+        console.log('When contract is unpausable: ');
+        await expect(slEth.connect(SlEthOwner).unpause()).to.emit(slEth, "Unpaused");
         value = await slEth.paused();
         expect(value).to.equal(false);
         console.log("Is Contract Pausable: ", value);
@@ -153,6 +155,7 @@ describe("Sleth's tests", function () {
         expect(allowance.toString()).to.equal("1105");
         console.log("balance of acc2: ", allowance.toString());
 
-
+        await slEth.connect(SlEthOwner)._mint(acc1.address, '10');
+        await slEth.connect(SlEthOwner)._burn(acc1.address, "10");
     })
 });
