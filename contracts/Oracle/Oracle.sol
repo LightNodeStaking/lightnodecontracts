@@ -2,8 +2,10 @@
 pragma solidity ^0.8.0;
 
 import "../lib/ReportUtils.sol";
+import "../interfaces/IOracle.sol";
+import "@openzeppelin/contracts/access/AccessControl.sol";
 
-contract Oracle{
+contract Oracle is IOracle, AccessControl{
     using ReportUtils for uint256;
 
     struct BeaconSpec {
@@ -13,7 +15,7 @@ contract Oracle{
         uint64 genesisTime;
     }
 
-    /// ACL
+    // ACL
     bytes32 constant public MANAGE_MEMBERS = keccak256("MANAGE_MEMBERS");
     bytes32 constant public MANAGE_QUORUM = keccak256("MANAGE_QUORUM");
     bytes32 constant public SET_BEACON_SPEC = keccak256("SET_BEACON_SPEC");
@@ -23,57 +25,55 @@ contract Oracle{
     /// Maximum number of oracle committee members
     uint256 public constant MAX_MEMBERS = 256;
 
-    /// Eth1 denomination is 18 digits, while Eth2 has 9 digits. Because we work with Eth2
-    /// balances and to support old interfaces expecting eth1 format, we multiply by this
-    /// coefficient.
+    // Eth1 denomination is 18 digits, while Eth2 has 9 digits. Because we work with Eth2
+    // balances and to support old interfaces expecting eth1 format, we multiply by this
+    // coefficient.
     uint128 internal constant DENOMINATION_OFFSET = 1e9;
 
     uint256 internal constant MEMBER_NOT_FOUND = uint256(-1);
 
-    /// Number of exactly the same reports needed to finalize the epoch
+    // Number of exactly the same reports needed to finalize the epoch
     bytes32 internal constant QUORUM_POSITION = keccak256("lioghtNode.LightNode.quorum");
 
-    /// Address of the LightNode contract
+    // Address of the LightNode contract
     bytes32 internal constant LIGHT_NODE_POSITION = keccak256("lioghtNode.LightNode.lido");
 
-    /// Storage for the actual beacon chain specification
+    // Storage for the actual beacon chain specification
     bytes32 internal constant BEACON_SPEC_POSITION = keccak256("lioghtNode.LightNode.beaconSpec");
 
-    /// Version of the initialized contract data, v1 is 0
+    // Version of the initialized contract data, v1 is 0
     bytes32 internal constant CONTRACT_VERSION_POSITION = keccak256("lioghtNode.LightNode.contractVersion");
 
-    /// Epoch that we currently collect reports
+    // Epoch that we currently collect reports
     bytes32 internal constant EXPECTED_EPOCH_ID_POSITION =  keccak256("lioghtNode.LightNode.expectedEpochId");
 
-    /// The bitmask of the oracle members that pushed their reports
+    // The bitmask of the oracle members that pushed their reports
     bytes32 internal constant REPORTS_BITMASK_POSITION = keccak256("lioghtNode.LightNode.reportsBitMask");
 
-    /// Historic data about 2 last completed reports and their times
+    // Historic data about 2 last completed reports and their times
     bytes32 internal constant POST_COMPLETED_TOTAL_POOLED_ETHER_POSITION = keccak256("lioghtNode.LightNode.postCompletedTotalPooledEther");
     bytes32 internal constant PRE_COMPLETED_TOTAL_POOLED_ETHER_POSITION = keccak256("lioghtNode.LightNode.preCompletedTotalPooledEther");
     bytes32 internal constant LAST_COMPLETED_EPOCH_ID_POSITION = keccak256("lioghtNode.LightNode.lastCompletedEpochId");
     bytes32 internal constant TIME_ELAPSED_POSITION = keccak256("lioghtNode.LightNode.timeElapsed");
 
-    /// Receiver address to be called when the report is pushed to LightNode
+    // Receiver address to be called when the report is pushed to LightNode
     bytes32 internal constant BEACON_REPORT_RECEIVER_POSITION = keccak256("lioghtNode.LightNode.beaconReportReceiver");
 
-    /// Upper bound of the reported balance possible increase in APR, controlled by the governance
+    // Upper bound of the reported balance possible increase in APR, controlled by the governance
     bytes32 internal constant ALLOWED_BEACON_BALANCE_ANNUAL_RELATIVE_INCREASE_POSITION = keccak256("lightNode.LightNode.allowedBeaconBalanceAnnualRelativeIncrease");
-
-    /// Lower bound of the reported balance possible decrease, controlled by the governance
-    ///
-    /// @notice When slashing happens, the balance may decrease at a much faster pace. Slashing are
-    /// one-time events that decrease the balance a fair amount - a few percent at a time in a
-    /// realistic scenario. Thus, instead of sanity check for an APR, we check if the plain relative
-    /// decrease is within bounds.  Note that it's not annual value, its just one-jump value.
+    // Lower bound of the reported balance possible decrease, controlled by the governance
+    // @notice When slashing happens, the balance may decrease at a much faster pace. Slashing are
+    // one-time events that decrease the balance a fair amount - a few percent at a time in a
+    // realistic scenario. Thus, instead of sanity check for an APR, we check if the plain relative
+    // decrease is within bounds.  Note that it's not annual value, its just one-jump value.
     bytes32 internal constant ALLOWED_BEACON_BALANCE_RELATIVE_DECREASE_POSITION = keccak256("lioghtNode.LightNode.allowedBeaconBalanceDecrease");
 
-    /// This variable is from v1: the last reported epoch, used only in the initializer
+    // This variable is from v1: the last reported epoch, used only in the initializer
     bytes32 internal constant V1_LAST_REPORTED_EPOCH_ID_POSITION = keccak256("lioghtNode.LightNode.lastReportedEpochId");
 
-    /// Contract structured storage
-    address[] private members;                /// slot 0: oracle committee members
-    uint256[] private currentReportVariants;  /// slot 1: reporting storage
+    // Contract structured storage
+    address[] private members;                // slot 0: oracle committee members
+    uint256[] private currentReportVariants;  // slot 1: reporting storage
 
     /**
     * @notice Return the LightNode contract address

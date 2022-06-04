@@ -7,7 +7,7 @@ import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "../lib/UnStructuredData.sol";
 import "../lib/MemoryUtils.sol";
-import "../Helper/ArrConversion";
+import "../Helper/ArrConversion.sol";
 import "solidity-bytes-utils/contracts/BytesLib.sol";
 
 contract NodeOperatorsRegistry is INodeOperatorsRegistry, AccessControl, ArrConversion{
