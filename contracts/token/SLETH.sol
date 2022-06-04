@@ -209,7 +209,7 @@ contract SLETH is Pausable, IERC20 {
         address from,
         address to,
         uint256 amount
-    ) public virtual {}
+    ) internal virtual {}
 
     function _afterTokenTransfer(
         address from,
