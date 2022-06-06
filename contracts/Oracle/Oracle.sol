@@ -3,6 +3,8 @@ pragma solidity ^0.8.0;
 
 import "../lib/ReportUtils.sol";
 import "../interfaces/IOracle.sol";
+import "../interfaces/IStaking.sol";
+import "../interfaces/IBeaconReportReceiver.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 
 contract Oracle is IOracle, AccessControl{
@@ -36,7 +38,7 @@ contract Oracle is IOracle, AccessControl{
     bytes32 internal constant QUORUM_POSITION = keccak256("lioghtNode.LightNode.quorum");
 
     // Address of the LightNode contract
-    bytes32 internal constant LIGHT_NODE_POSITION = keccak256("lioghtNode.LightNode.lido");
+    bytes32 internal constant LIGHT_NODE_POSITION = keccak256("lightNode.LightNode.node");
 
     // Storage for the actual beacon chain specification
     bytes32 internal constant BEACON_SPEC_POSITION = keccak256("lioghtNode.LightNode.beaconSpec");
@@ -78,8 +80,8 @@ contract Oracle is IOracle, AccessControl{
     /**
     * @notice Return the LightNode contract address
     */
-    function getLido() public view returns (ILido) {
-        return ILido(LIDO_POSITION.getStorageAddress());
+    function getLightNode() public view returns (IStaking) {
+        return IStaking(LIGHT_NODE_POSITION.getStorageAddress());
     }
 
     /**
@@ -106,7 +108,7 @@ contract Oracle is IOracle, AccessControl{
     /**
      * @notice Set the upper bound of the reported balance possible increase in APR to `_value`
      */
-    function setAllowedBeaconBalanceAnnualRelativeIncrease(uint256 _value) external auth(SET_REPORT_BOUNDARIES) {
+    function setAllowedBeaconBalanceAnnualRelativeIncrease(uint256 _value) external onlyRole(SET_REPORT_BOUNDARIES) {
         ALLOWED_BEACON_BALANCE_ANNUAL_RELATIVE_INCREASE_POSITION.setStorageUint256(_value);
         emit AllowedBeaconBalanceAnnualRelativeIncreaseSet(_value);
     }
@@ -114,7 +116,7 @@ contract Oracle is IOracle, AccessControl{
     /**
      * @notice Set the lower bound of the reported balance possible decrease to `_value`
      */
-    function setAllowedBeaconBalanceRelativeDecrease(uint256 _value) external auth(SET_REPORT_BOUNDARIES) {
+    function setAllowedBeaconBalanceRelativeDecrease(uint256 _value) external onlyRole(SET_REPORT_BOUNDARIES) {
         ALLOWED_BEACON_BALANCE_RELATIVE_DECREASE_POSITION.setStorageUint256(_value);
         emit AllowedBeaconBalanceRelativeDecreaseSet(_value);
     }
@@ -130,7 +132,7 @@ contract Oracle is IOracle, AccessControl{
      * @notice Set the receiver contract address to `_addr` to be called when the report is pushed
      * @dev Specify 0 to disable this functionality
      */
-    function setBeaconReportReceiver(address _addr) external auth(SET_BEACON_REPORT_RECEIVER) {
+    function setBeaconReportReceiver(address _addr) external onlyRole(SET_BEACON_REPORT_RECEIVER) {
         BEACON_REPORT_RECEIVER_POSITION.setStorageUint256(uint256(_addr));
         emit BeaconReportReceiverSet(_addr);
     }
@@ -176,7 +178,7 @@ contract Oracle is IOracle, AccessControl{
     /**
     * @notice Return the current oracle member committee list
     */
-    function getOracleMembers() external view returns (address[]) {
+    function getOracleMembers() external view returns (address[] memory) {
         return members;
     }
 
@@ -207,7 +209,7 @@ contract Oracle is IOracle, AccessControl{
         uint64 _genesisTime
     )
         external
-        auth(SET_BEACON_SPEC)
+        onlyRole(SET_BEACON_SPEC)
     {
         _setBeaconSpec(
             _epochsPerFrame,
@@ -309,7 +311,7 @@ contract Oracle is IOracle, AccessControl{
     /**
      * @notice Add `_member` to the oracle member committee list
      */
-    function addOracleMember(address _member) external auth(MANAGE_MEMBERS) {
+    function addOracleMember(address _member) external onlyRole(MANAGE_MEMBERS) {
         require(address(0) != _member, "BAD_ARGUMENT");
         require(MEMBER_NOT_FOUND == _getMemberId(_member), "MEMBER_EXISTS");
 
@@ -321,7 +323,7 @@ contract Oracle is IOracle, AccessControl{
     /**
      * @notice Remove '_member` from the oracle member committee list
      */
-    function removeOracleMember(address _member) external auth(MANAGE_MEMBERS) {
+    function removeOracleMember(address _member) external onlyRole(MANAGE_MEMBERS) {
         uint256 index = _getMemberId(_member);
         require(index != MEMBER_NOT_FOUND, "MEMBER_NOT_FOUND");
         uint256 last = members.length - 1;
@@ -337,7 +339,7 @@ contract Oracle is IOracle, AccessControl{
     /**
     * @notice Set the number of exactly the same reports needed to finalize the epoch to `_quorum`
     */
-    function setQuorum(uint256 _quorum) external auth(MANAGE_QUORUM) {
+    function setQuorum(uint256 _quorum) external onlyRole(MANAGE_QUORUM) {
         require(0 != _quorum, "QUORUM_WONT_BE_MADE");
         uint256 oldQuorum = QUORUM_POSITION.getStorageUint256();
         QUORUM_POSITION.setStorageUint256(_quorum);
@@ -507,10 +509,10 @@ contract Oracle is IOracle, AccessControl{
         _clearReportingAndAdvanceTo(_epochId + _beaconSpec.epochsPerFrame);
 
         // report to the Lido and collect stats
-        ILido lido = getLido();
-        uint256 prevTotalPooledEther = lido.totalSupply();
-        lido.pushBeacon(_beaconValidators, _beaconBalanceEth1);
-        uint256 postTotalPooledEther = lido.totalSupply();
+        IStaking lightNode = getLightNode();
+        uint256 prevTotalPooledEther = lightNode.totalSupply();
+        lightNode.pushBeacon(_beaconValidators, _beaconBalanceEth1);
+        uint256 postTotalPooledEther = lightNode.totalSupply();
 
         PRE_COMPLETED_TOTAL_POOLED_ETHER_POSITION.setStorageUint256(prevTotalPooledEther);
         POST_COMPLETED_TOTAL_POOLED_ETHER_POSITION.setStorageUint256(postTotalPooledEther);
@@ -523,7 +525,7 @@ contract Oracle is IOracle, AccessControl{
         _reportSanityChecks(postTotalPooledEther, prevTotalPooledEther, timeElapsed);
 
         // emit detailed statistics and call the quorum delegate with this data
-        emit PostTotalShares(postTotalPooledEther, prevTotalPooledEther, timeElapsed, lido.getTotalShares());
+        emit PostTotalShares(postTotalPooledEther, prevTotalPooledEther, timeElapsed, lightNode.getTotalShares());
         IBeaconReportReceiver receiver = IBeaconReportReceiver(BEACON_REPORT_RECEIVER_POSITION.getStorageUint256());
         if (address(receiver) != address(0)) {
             receiver.processLidoOracleReport(postTotalPooledEther, prevTotalPooledEther, timeElapsed);
@@ -608,6 +610,6 @@ contract Oracle is IOracle, AccessControl{
     * @notice Return the current timestamp
     */
     function _getTime() internal view returns (uint256) {
-        return block.timestamp; // solhint-disable-line not-rely-on-time
+        return block.timestamp; 
     }
 }
