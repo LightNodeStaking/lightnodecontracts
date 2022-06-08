@@ -5,7 +5,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 import "../lib/UnStructuredData.sol";
 
-contract SLETH is Pausable, IERC20 {
+contract SLETH is IERC20, Pausable {
     using UnStructuredData for bytes32;
     mapping(address => uint256) public _balances;
 
@@ -14,17 +14,10 @@ contract SLETH is Pausable, IERC20 {
     bytes32 internal constant TOTAL_SHARES_POSITION =
         keccak256("StETH.totalShares");
 
-    uint256 public _totalSupply;
     string public _name = "Lightnode staked Ether";
     string public _symbol = "slETH";
     uint8 public _decimal = 18;
     address public tokenAccount;
-
-    constructor(address _owner) {
-        tokenAccount = _owner;
-        _totalSupply = 1000000 * (10**_decimal);
-        _balances[_owner] = _totalSupply;
-    }
 
     function name() public view virtual returns (string memory) {
         return _name;
@@ -39,7 +32,11 @@ contract SLETH is Pausable, IERC20 {
     }
 
     function totalSupply() public view virtual override returns (uint256) {
-        return _totalSupply;
+        return _getTotalPooledEther();
+    }
+
+    function getTotalPooledEther() public view returns (uint256) {
+        return _getTotalPooledEther();
     }
 
     function balanceOf(address account)
@@ -125,7 +122,7 @@ contract SLETH is Pausable, IERC20 {
         uint256 currentAllowance = _allowances[msg.sender][spender];
         require(
             currentAllowance >= subtractedValue,
-            "ERC20: decreased allowance below zero"
+            "ERC20: DECREASED_ALLOWANCE_BELOW_ZERO"
         );
         unchecked {
             _approve(msg.sender, spender, currentAllowance - subtractedValue);
@@ -147,7 +144,7 @@ contract SLETH is Pausable, IERC20 {
         view
         returns (uint256)
     {
-        uint256 totalPooledEther = totalSupply();
+        uint256 totalPooledEther = _getTotalPooledEther();
         if (totalPooledEther == 0) {
             return 0;
         } else {
@@ -164,7 +161,7 @@ contract SLETH is Pausable, IERC20 {
         if (totalShares == 0) {
             return 0;
         } else {
-            return (_sharesAmount * (totalSupply())) / (totalShares);
+            return (_sharesAmount * (_getTotalPooledEther())) / (totalShares);
         }
     }
 
@@ -176,69 +173,44 @@ contract SLETH is Pausable, IERC20 {
         return _balances[_account];
     }
 
-    //function _getTotalPooledEther() internal view returns (uint256); total supply can be used
+    //_getTotalPooledEther() function needs tro be implemented in teh main contract.
+    // further testing will be required at the master contract testing stage.
+
+    function _getTotalPooledEther() internal virtual returns (uint256);
 
     function _transfer(
         address sender,
         address recipient,
         uint256 amount
     ) internal virtual whenNotPaused {
-        require(sender != address(0), "ERC20: TRANSFER_FROM_THE_ZERO_ADDRESS");
-        require(recipient != address(0), "ERC20: TRANSFER_TO_THE_ZERO_ADDRESS");
-
-        _beforeTokenTransfer(sender, recipient, amount);
-
-        uint256 senderBalance = _balances[sender];
-        require(
-            senderBalance >= amount,
-            "ERC20: transfer amount exceeds balance"
-        );
-        unchecked {
-            _balances[sender] = senderBalance - amount;
-        }
-        _balances[recipient] += amount;
+        uint256 _sharesToTransfer = getSharesByPooledEth(amount);
+        _transferShares(sender, recipient, _sharesToTransfer);
 
         emit Transfer(sender, recipient, amount);
-
-        _afterTokenTransfer(sender, recipient, amount);
     }
 
-    // function _transfer(
-    //     address sender,
-    //     address recipient,
-    //     uint256 amount
-    // ) public virtual whenNotPaused {
-    //     uint256 _sharesToTransfer = getSharesByPooledEth(amount);
-    //     _transferShares(sender, recipient, _sharesToTransfer);
+    function _transferShares(
+        address _sender,
+        address _recipient,
+        uint256 _sharesAmount
+    ) internal whenNotPaused {
+        require(_sender != address(0), "TRANSFER_FROM_THE_ZERO_ADDRESS");
+        require(_recipient != address(0), "TRANSFER_TO_THE_ZERO_ADDRESS");
 
-    //     emit Transfer(sender, recipient, amount);
-    // }
+        _beforeTokenTransfer(_sender, _recipient, _sharesAmount);
 
-    // function _transferShares(
-    //     address _sender,
-    //     address _recipient,
-    //     uint256 _sharesAmount
-    // ) internal whenNotPaused {
-    //     require(_sender != address(0), "TRANSFER_FROM_THE_ZERO_ADDRESS");
-    //     require(_recipient != address(0), "TRANSFER_TO_THE_ZERO_ADDRESS");
+        uint256 senderBalance = _balances[_sender];
+        require(
+            senderBalance >= _sharesAmount,
+            "ERC20: transfer amount exceeds balance"
+        );
 
-    //     _beforeTokenTransfer(_sender, _recipient, _sharesAmount);
+        _balances[_sender] = senderBalance - _sharesAmount;
 
-    //     uint256 senderBalance = _balances[_sender];
-    //     require(
-    //         senderBalance >= _sharesAmount,
-    //         "ERC20: transfer amount exceeds balance"
-    //     );
+        _balances[_recipient] += _sharesAmount;
 
-    //     _balances[_sender] = senderBalance - _sharesAmount;
-
-    //     /* unchecked {
-    //         _balances[_sender] = senderBalance - _sharesAmount;
-    //     }*/
-    //     _balances[_recipient] += _sharesAmount;
-
-    //     _afterTokenTransfer(_sender, _recipient, _sharesAmount);
-    // }
+        _afterTokenTransfer(_sender, _recipient, _sharesAmount);
+    }
 
     //mint function, mints new shares. it does not change the totalsupply
 
@@ -257,8 +229,6 @@ contract SLETH is Pausable, IERC20 {
 
         _balances[account] += amount;
 
-        //_totalSupply += amount;
-        //_balances[account] += amount;
         emit Transfer(address(0), account, amount);
 
         _afterTokenTransfer(address(0), account, amount);
@@ -285,9 +255,6 @@ contract SLETH is Pausable, IERC20 {
         unchecked {
             _balances[account] -= amount;
         }
-        //_balances[account] -= amount;
-
-        //_totalSupply -= amount;
 
         emit Transfer(account, address(0), amount);
 
@@ -298,7 +265,7 @@ contract SLETH is Pausable, IERC20 {
         address owner,
         address spender,
         uint256 amount
-    ) public virtual whenNotPaused {
+    ) internal virtual whenNotPaused {
         require(owner != address(0), "ERC20: approve from the zero address");
         require(spender != address(0), "ERC20: approve to the zero address");
 
