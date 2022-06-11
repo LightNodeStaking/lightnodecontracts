@@ -5,7 +5,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 import "../lib/UnStructuredData.sol";
 
-contract SLETH is IERC20, Pausable {
+abstract contract SLETH is IERC20, Pausable {
     using UnStructuredData for bytes32;
     mapping(address => uint256) public _balances;
 
@@ -17,7 +17,8 @@ contract SLETH is IERC20, Pausable {
     string public _name = "Lightnode staked Ether";
     string public _symbol = "slETH";
     uint8 public _decimal = 18;
-    address public tokenAccount;
+
+    //address public tokenAccount;
 
     function name() public view virtual returns (string memory) {
         return _name;
@@ -176,7 +177,7 @@ contract SLETH is IERC20, Pausable {
     //_getTotalPooledEther() function needs tro be implemented in teh main contract.
     // further testing will be required at the master contract testing stage.
 
-    function _getTotalPooledEther() internal virtual returns (uint256);
+    function _getTotalPooledEther() internal view virtual returns (uint256);
 
     function _transfer(
         address sender,
