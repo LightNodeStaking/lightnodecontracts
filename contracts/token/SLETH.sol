@@ -47,7 +47,7 @@ abstract contract SLETH is IERC20, Pausable {
         override
         returns (uint256)
     {
-        return _balances[account];
+        return getPooledEthByShares(_sharesOf(account));
     }
 
     function transfer(address recipient, uint256 amount)
@@ -56,7 +56,6 @@ abstract contract SLETH is IERC20, Pausable {
         override
         returns (bool)
     {
-        require(_balances[msg.sender] >= amount, "NOT_ENOUGH_BALANCE");
         _transfer(msg.sender, recipient, amount);
         return true;
     }
