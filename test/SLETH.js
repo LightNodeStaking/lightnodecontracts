@@ -11,7 +11,7 @@ describe("Sleth's tests", function () {
     const name = 'Lightnode staked Ether';
     const symbol = 'slETH';
     const decimals = '18';
-    const totalSupply = "1000000000000000000000000";
+    //const totalSupply = "1000000000000000000000000";
     let slEth, SlEthOwner, stakingOwner, devFee;
 
 
@@ -27,15 +27,12 @@ describe("Sleth's tests", function () {
     });
 
     beforeEach(async function () {
-        [SlEthOwner, stakingOwner, devFee, acc1, acc2] = await ethers.getSigners();
+        [SlEthOwner, stakingOwner, devFee, acc1, acc2, acc3] = await ethers.getSigners();
 
         //deploying SLeth contract
-        const SlEth = await hre.ethers.getContractFactory("SLETH");
+        const SlEth = await hre.ethers.getContractFactory("SlethMock");
         slEth = await SlEth.deploy(SlEthOwner.address);
-        //await slEth.deployed();
 
-        //Transfering 10000 token to acc1
-        await slEth.connect(SlEthOwner).transfer(acc1.address, "100000000000000000000000")
         table.push(
             ["SLETH token deployed at: ", slEth.address],
             ["SlEth owner is: ", SlEthOwner.address],
@@ -46,6 +43,7 @@ describe("Sleth's tests", function () {
     })
 
     it('slETH token deployment', async function () {
+        let totalSupply = '0';
         const tokenName = await slEth.name();
         expect(tokenName).to.equal(name);
         const tokenSymbol = await slEth.symbol();
@@ -54,6 +52,7 @@ describe("Sleth's tests", function () {
         expect(tokenDecimlas.toString()).to.equal(decimals);
         const tokenTotalSupply = (await slEth.totalSupply()).toString();
         expect(tokenTotalSupply).to.equal(totalSupply)
+
 
         testTable.push(
             ["SLETH token's name ", tokenName],
@@ -64,17 +63,35 @@ describe("Sleth's tests", function () {
         )
         console.log(testTable.toString())
     });
-    it('sending tokens', async function () {
+    it('Assign and sending tokens', async function () {
         let balanceOf;
+        await slEth.setTotalPooledEther(2000);
+        await slEth.mintShares(SlEthOwner.address, 2000);
         balanceOf = await slEth.balanceOf(SlEthOwner.address);
-        expect(balanceOf.toString()).to.equal("900000000000000000000000")
-        //balanceOf.toString().should.equal(tokens(900000).toString())
-        balanceOf = await slEth.balanceOf(acc1.address)
-        expect(balanceOf.toString()).to.equal("100000000000000000000000");
+        console.log('balance of Sleth Owner: ', balanceOf);
+
+        await slEth.connect(SlEthOwner).transfer(acc1.address, 750);
+        balanceOf = await slEth.balanceOf(acc1.address);
+        console.log('balance of Acc1: ', balanceOf);
+
+        await slEth.connect(acc1).transfer(acc2.address, 500);
+        balanceOf = await slEth.balanceOf(acc2.address);
+        console.log('balance of Acc2: ', balanceOf);
+
+        await slEth.connect(acc2).transfer(acc3.address, 250);
+        balanceOf = await slEth.balanceOf(acc3.address);
+        console.log('balance of Acc3: ', balanceOf);
+
+        await slEth.connect(acc3).transfer(acc1.address, 50);
+        balanceOf = await slEth.balanceOf(acc1.address);
+        console.log('balance of Acc3: ', balanceOf);
+
     })
     it('failure', async function () {
+        await slEth.setTotalPooledEther(1000);
+        await slEth.mintShares(acc1.address, 1000);
         const invalidAamount = "10000000000000000000000000"; //100million
-        await expectRevert.unspecified(slEth.connect(SlEthOwner).transfer(acc2.address, invalidAamount), "ERC20: transfer amount exceeds balance");
+        await expectRevert.unspecified(slEth.connect(acc1).transfer(acc2.address, invalidAamount), "ERC20: transfer amount exceeds balance");
     });
     it('rejects invalid recipients', async () => {
         await expectRevert.unspecified(slEth.connect(SlEthOwner).transfer("0x0000000000000000000000000000000000000000", "1000000000000000000000000"));
@@ -99,6 +116,9 @@ describe("Sleth's tests", function () {
 
     it("Pausable / Unpausable Contract testing", async function () {
 
+        await slEth.setTotalPooledEther(2000);
+        await slEth.mintShares(SlEthOwner.address, 2000);
+
         console.log('When contract is unpausable: ');
         let value = await slEth.paused();
         expect(value).to.equal(false);
@@ -107,21 +127,24 @@ describe("Sleth's tests", function () {
         const owner = await slEth.tokenAccount();
         console.log('Owner is: ', owner);
 
+        let allowance, balanceOf;
         await slEth.connect(SlEthOwner).transfer(acc1.address, "100");
         await slEth.connect(SlEthOwner).approve(acc1.address, "100");
-        let allowance = await slEth.allowance(SlEthOwner.address, acc1.address)
+        allowance = await slEth.allowance(SlEthOwner.address, acc1.address);
         expect(allowance.toString()).to.equal("100");
-        console.log("balance of acc1: ", allowance.toString());
+        balanceOf = await slEth.balanceOf(acc1.address);
+        console.log("balance of acc1: ", balanceOf);
 
-        await slEth.connect(SlEthOwner).transfer(acc2.address, "1000");
-        await slEth.connect(SlEthOwner).approve(acc2.address, "1000");
-        allowance = await slEth.allowance(SlEthOwner.address, acc2.address)
-        expect(allowance.toString()).to.equal("1000");
-        console.log("balance of acc2: ", allowance.toString());
+        await slEth.connect(SlEthOwner).transfer(acc2.address, "500");
+        await slEth.connect(SlEthOwner).approve(acc2.address, "500");
+        allowance = await slEth.allowance(SlEthOwner.address, acc2.address);
+        expect(allowance.toString()).to.equal("500");
+        balanceOf = await slEth.balanceOf(acc2.address);
+        console.log("balance of acc2: ", balanceOf);
 
         console.log('When contract is pausable: ');
         //making contract pausable and emmiting the event.
-        await expect(slEth.connect(SlEthOwner).pause()).to.emit(slEth, "Paused")
+        await expect(slEth.connect(SlEthOwner).pause()).to.emit(slEth, "Paused");
         value = await slEth.paused();
         expect(value).to.equal(true);
         console.log("Is Contract Pausable: ", value);
@@ -130,9 +153,9 @@ describe("Sleth's tests", function () {
         await expectRevert.unspecified(slEth.connect(SlEthOwner).approve(acc1.address, "100"));
         await expectRevert.unspecified(slEth.connect(SlEthOwner).transferFrom(SlEthOwner.address, acc1.address, "100"));
 
-        await expectRevert.unspecified(slEth.connect(SlEthOwner).transfer(acc2.address, "11210"));
-        await expectRevert.unspecified(slEth.connect(SlEthOwner).approve(acc2.address, "11210"));
-        await expectRevert.unspecified(slEth.connect(SlEthOwner).transferFrom(SlEthOwner.address, acc2.address, "11210"));
+        await expectRevert.unspecified(slEth.connect(SlEthOwner).transfer(acc2.address, "150"));
+        await expectRevert.unspecified(slEth.connect(SlEthOwner).approve(acc2.address, "150"));
+        await expectRevert.unspecified(slEth.connect(SlEthOwner).transferFrom(SlEthOwner.address, acc2.address, "150"));
         await expectRevert.unspecified(slEth.connect(SlEthOwner)._mint(acc1.address, "10"));
         await expectRevert.unspecified(slEth.connect(SlEthOwner)._burn(acc1.address, "10"));
 
@@ -143,17 +166,19 @@ describe("Sleth's tests", function () {
         expect(value).to.equal(false);
         console.log("Is Contract Pausable: ", value);
 
-        await slEth.connect(SlEthOwner).transfer(acc1.address, "150");
-        await slEth.connect(SlEthOwner).approve(acc1.address, "150");
-        allowance = await slEth.allowance(SlEthOwner.address, acc1.address)
-        expect(allowance.toString()).to.equal("150");
-        console.log("balance of acc1: ", allowance.toString());
+        await slEth.connect(SlEthOwner).transfer(acc1.address, "160");
+        await slEth.connect(SlEthOwner).approve(acc1.address, "160");
+        allowance = await slEth.allowance(SlEthOwner.address, acc1.address);
+        expect(allowance.toString()).to.equal("160");
+        balanceOf = await slEth.balanceOf(acc1.address);
+        console.log("balance of acc1: ", allowance);
 
-        await slEth.connect(SlEthOwner).transfer(acc2.address, "1105");
-        await slEth.connect(SlEthOwner).approve(acc2.address, "1105");
-        allowance = await slEth.allowance(SlEthOwner.address, acc2.address)
-        expect(allowance.toString()).to.equal("1105");
-        console.log("balance of acc2: ", allowance.toString());
+        await slEth.connect(SlEthOwner).transfer(acc2.address, "111");
+        await slEth.connect(SlEthOwner).approve(acc2.address, "111");
+        allowance = await slEth.allowance(SlEthOwner.address, acc2.address);
+        expect(allowance.toString()).to.equal("111");
+        balanceOf = await slEth.balanceOf(acc2.address);
+        console.log("balance of acc2: ", allowance);
 
         await slEth.connect(SlEthOwner)._mint(acc1.address, '10');
         await slEth.connect(SlEthOwner)._burn(acc1.address, "10");
