@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-interface IStaking{
-    
-    function depositEth1() payable external;
+interface IStaking {
+    function depositEth1() external payable;
+
     function setOwner(address _newOwner) external;
     function setDevAddress(address _newDevAddress) external;
     function getTotalShares() external view returns (uint256);

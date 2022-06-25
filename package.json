@@ -31,6 +31,6 @@
   },
   "homepage": "https://github.com/LightNodeStaking/lightnodecontracts#readme",
   "dependencies": {
-    "solidity-bytes-utils": "^0.8.0"
+    "big-number": "^2.0.0"
   }
 }
