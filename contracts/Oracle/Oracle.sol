@@ -38,68 +38,42 @@ contract Oracle is IOracle, AccessControl {
     uint256 internal constant MEMBER_NOT_FOUND = type(uint256).max;
 
     // Number of exactly the same reports needed to finalize the epoch
-<<<<<<< HEAD
     bytes32 internal constant QUORUM_POSITION =
-        keccak256("lioghtNode.LightNode.quorum");
-=======
-    bytes32 internal constant QUORUM_POSITION = keccak256("lightNode.LightNode.quorum");
->>>>>>> f8b022c040d20a5a2b8c71c449d336a941b92fc3
+        keccak256("lightNode.LightNode.quorum");
 
     // Address of the LightNode contract
     bytes32 internal constant LIGHT_NODE_POSITION =
         keccak256("lightNode.LightNode.node");
 
     // Storage for the actual beacon chain specification
-<<<<<<< HEAD
     bytes32 internal constant BEACON_SPEC_POSITION =
-        keccak256("lioghtNode.LightNode.beaconSpec");
+        keccak256("lightNode.LightNode.beaconSpec");
 
     // Version of the initialized contract data, v1 is 0
     bytes32 internal constant CONTRACT_VERSION_POSITION =
-        keccak256("lioghtNode.LightNode.contractVersion");
+        keccak256("lightNode.LightNode.contractVersion");
 
     // Epoch that we currently collect reports
     bytes32 internal constant EXPECTED_EPOCH_ID_POSITION =
-        keccak256("lioghtNode.LightNode.expectedEpochId");
+        keccak256("lightNode.LightNode.expectedEpochId");
 
     // The bitmask of the oracle members that pushed their reports
     bytes32 internal constant REPORTS_BITMASK_POSITION =
-        keccak256("lioghtNode.LightNode.reportsBitMask");
+        keccak256("lightNode.LightNode.reportsBitMask");
 
     // Historic data about 2 last completed reports and their times
     bytes32 internal constant POST_COMPLETED_TOTAL_POOLED_ETHER_POSITION =
-        keccak256("lioghtNode.LightNode.postCompletedTotalPooledEther");
+        keccak256("lightNode.LightNode.postCompletedTotalPooledEther");
     bytes32 internal constant PRE_COMPLETED_TOTAL_POOLED_ETHER_POSITION =
-        keccak256("lioghtNode.LightNode.preCompletedTotalPooledEther");
+        keccak256("lightNode.LightNode.preCompletedTotalPooledEther");
     bytes32 internal constant LAST_COMPLETED_EPOCH_ID_POSITION =
-        keccak256("lioghtNode.LightNode.lastCompletedEpochId");
+        keccak256("lightNode.LightNode.lastCompletedEpochId");
     bytes32 internal constant TIME_ELAPSED_POSITION =
-        keccak256("lioghtNode.LightNode.timeElapsed");
+        keccak256("lightNode.LightNode.timeElapsed");
 
     // Receiver address to be called when the report is pushed to LightNode
     bytes32 internal constant BEACON_REPORT_RECEIVER_POSITION =
-        keccak256("lioghtNode.LightNode.beaconReportReceiver");
-=======
-    bytes32 internal constant BEACON_SPEC_POSITION = keccak256("lightNode.LightNode.beaconSpec");
-
-    // Version of the initialized contract data, v1 is 0
-    bytes32 internal constant CONTRACT_VERSION_POSITION = keccak256("lightNode.LightNode.contractVersion");
-
-    // Epoch that we currently collect reports
-    bytes32 internal constant EXPECTED_EPOCH_ID_POSITION =  keccak256("lightNode.LightNode.expectedEpochId");
-
-    // The bitmask of the oracle members that pushed their reports
-    bytes32 internal constant REPORTS_BITMASK_POSITION = keccak256("lightNode.LightNode.reportsBitMask");
-
-    // Historic data about 2 last completed reports and their times
-    bytes32 internal constant POST_COMPLETED_TOTAL_POOLED_ETHER_POSITION = keccak256("lightNode.LightNode.postCompletedTotalPooledEther");
-    bytes32 internal constant PRE_COMPLETED_TOTAL_POOLED_ETHER_POSITION = keccak256("lightNode.LightNode.preCompletedTotalPooledEther");
-    bytes32 internal constant LAST_COMPLETED_EPOCH_ID_POSITION = keccak256("lightNode.LightNode.lastCompletedEpochId");
-    bytes32 internal constant TIME_ELAPSED_POSITION = keccak256("lightNode.LightNode.timeElapsed");
-
-    // Receiver address to be called when the report is pushed to LightNode
-    bytes32 internal constant BEACON_REPORT_RECEIVER_POSITION = keccak256("lightNode.LightNode.beaconReportReceiver");
->>>>>>> f8b022c040d20a5a2b8c71c449d336a941b92fc3
+        keccak256("lightNode.LightNode.beaconReportReceiver");
 
     // Upper bound of the reported balance possible increase in APR, controlled by the governance
     bytes32
@@ -112,126 +86,96 @@ contract Oracle is IOracle, AccessControl {
     // one-time events that decrease the balance a fair amount - a few percent at a time in a
     // realistic scenario. Thus, instead of sanity check for an APR, we check if the plain relative
     // decrease is within bounds.  Note that it's not annual value, its just one-jump value.
-<<<<<<< HEAD
     bytes32
         internal constant ALLOWED_BEACON_BALANCE_RELATIVE_DECREASE_POSITION =
-        keccak256("lioghtNode.LightNode.allowedBeaconBalanceDecrease");
+        keccak256("lightNode.LightNode.allowedBeaconBalanceDecrease");
 
     // This variable is from v1: the last reported epoch, used only in the initializer
     bytes32 internal constant V1_LAST_REPORTED_EPOCH_ID_POSITION =
-        keccak256("lioghtNode.LightNode.lastReportedEpochId");
-=======
-    bytes32 internal constant ALLOWED_BEACON_BALANCE_RELATIVE_DECREASE_POSITION = keccak256("lightNode.LightNode.allowedBeaconBalanceDecrease");
-
-    // This variable is from v1: the last reported epoch, used only in the initializer
-    bytes32 internal constant V1_LAST_REPORTED_EPOCH_ID_POSITION = keccak256("lightNode.LightNode.lastReportedEpochId");
->>>>>>> f8b022c040d20a5a2b8c71c449d336a941b92fc3
+        keccak256("lightNode.LightNode.lastReportedEpochId");
 
     // Contract structured storage
     address[] private members; // slot 0: oracle committee members
     uint256[] private currentReportVariants; // slot 1: reporting storage
 
     /**
-<<<<<<< HEAD
      * @notice Return the LightNode contract address
      */
-    function getLightNode() public view returns (IStaking) {
-=======
-    * @notice Return the LightNode contract address
-    */
     function getLightNode() public view override returns (IStaking) {
->>>>>>> f8b022c040d20a5a2b8c71c449d336a941b92fc3
         return IStaking(LIGHT_NODE_POSITION.getStorageAddress());
     }
 
     /**
-<<<<<<< HEAD
      * @notice Return the number of exactly the same reports needed to finalize the epoch
      */
-    function getQuorum() public view returns (uint256) {
-=======
-    * @notice Return the number of exactly the same reports needed to finalize the epoch
-    */
     function getQuorum() public view override returns (uint256) {
->>>>>>> f8b022c040d20a5a2b8c71c449d336a941b92fc3
         return QUORUM_POSITION.getStorageUint256();
     }
 
     /**
      * @notice Return the upper bound of the reported balance possible increase in APR
      */
-<<<<<<< HEAD
     function getAllowedBeaconBalanceAnnualRelativeIncrease()
         external
         view
+        override
         returns (uint256)
     {
         return
             ALLOWED_BEACON_BALANCE_ANNUAL_RELATIVE_INCREASE_POSITION
                 .getStorageUint256();
-=======
-    function getAllowedBeaconBalanceAnnualRelativeIncrease() external view override returns (uint256) {
-        return ALLOWED_BEACON_BALANCE_ANNUAL_RELATIVE_INCREASE_POSITION.getStorageUint256();
->>>>>>> f8b022c040d20a5a2b8c71c449d336a941b92fc3
     }
 
     /**
      * @notice Return the lower bound of the reported balance possible decrease
      */
-<<<<<<< HEAD
     function getAllowedBeaconBalanceRelativeDecrease()
         external
         view
+        override
         returns (uint256)
     {
         return
             ALLOWED_BEACON_BALANCE_RELATIVE_DECREASE_POSITION
                 .getStorageUint256();
-=======
-    function getAllowedBeaconBalanceRelativeDecrease() external view override returns (uint256) {
-        return ALLOWED_BEACON_BALANCE_RELATIVE_DECREASE_POSITION.getStorageUint256();
->>>>>>> f8b022c040d20a5a2b8c71c449d336a941b92fc3
     }
 
     /**
      * @notice Set the upper bound of the reported balance possible increase in APR to `_value`
      */
-<<<<<<< HEAD
     function setAllowedBeaconBalanceAnnualRelativeIncrease(uint256 _value)
         external
+        override
         onlyRole(SET_REPORT_BOUNDARIES)
     {
         ALLOWED_BEACON_BALANCE_ANNUAL_RELATIVE_INCREASE_POSITION
             .setStorageUint256(_value);
-=======
-    function setAllowedBeaconBalanceAnnualRelativeIncrease(uint256 _value) external override onlyRole(SET_REPORT_BOUNDARIES) {
-        ALLOWED_BEACON_BALANCE_ANNUAL_RELATIVE_INCREASE_POSITION.setStorageUint256(_value);
->>>>>>> f8b022c040d20a5a2b8c71c449d336a941b92fc3
         emit AllowedBeaconBalanceAnnualRelativeIncreaseSet(_value);
     }
 
     /**
      * @notice Set the lower bound of the reported balance possible decrease to `_value`
      */
-<<<<<<< HEAD
     function setAllowedBeaconBalanceRelativeDecrease(uint256 _value)
         external
+        override
         onlyRole(SET_REPORT_BOUNDARIES)
     {
         ALLOWED_BEACON_BALANCE_RELATIVE_DECREASE_POSITION.setStorageUint256(
             _value
         );
-=======
-    function setAllowedBeaconBalanceRelativeDecrease(uint256 _value) external override onlyRole(SET_REPORT_BOUNDARIES) {
-        ALLOWED_BEACON_BALANCE_RELATIVE_DECREASE_POSITION.setStorageUint256(_value);
->>>>>>> f8b022c040d20a5a2b8c71c449d336a941b92fc3
         emit AllowedBeaconBalanceRelativeDecreaseSet(_value);
     }
 
     /**
      * @notice Return the receiver contract address to be called when the report is pushed to LightNode
      */
-    function getBeaconReportReceiver() external view override returns (address) {
+    function getBeaconReportReceiver()
+        external
+        view
+        override
+        returns (address)
+    {
         return address(BEACON_REPORT_RECEIVER_POSITION.getStorageUint256());
     }
 
@@ -239,14 +183,11 @@ contract Oracle is IOracle, AccessControl {
      * @notice Set the receiver contract address to `_addr` to be called when the report is pushed
      * @dev Specify 0 to disable this functionality
      */
-<<<<<<< HEAD
     function setBeaconReportReceiver(address _addr)
         external
+        override
         onlyRole(SET_BEACON_REPORT_RECEIVER)
     {
-=======
-    function setBeaconReportReceiver(address _addr) external override onlyRole(SET_BEACON_REPORT_RECEIVER) {
->>>>>>> f8b022c040d20a5a2b8c71c449d336a941b92fc3
         BEACON_REPORT_RECEIVER_POSITION.setStorageUint256(uint256(_addr));
         emit BeaconReportReceiverSet(_addr);
     }
@@ -256,14 +197,24 @@ contract Oracle is IOracle, AccessControl {
      * their version of report during the expected epoch
      * @dev Every oracle bit corresponds to the index of the oracle in the current members list
      */
-    function getCurrentOraclesReportStatus() external view override returns (uint256) {
+    function getCurrentOraclesReportStatus()
+        external
+        view
+        override
+        returns (uint256)
+    {
         return REPORTS_BITMASK_POSITION.getStorageUint256();
     }
 
     /**
      * @notice Return the current reporting variants array size
      */
-    function getCurrentReportVariantsSize() external view override returns (uint256) {
+    function getCurrentReportVariantsSize()
+        external
+        view
+        override
+        returns (uint256)
+    {
         return currentReportVariants.length;
     }
 
@@ -272,7 +223,8 @@ contract Oracle is IOracle, AccessControl {
      */
     function getCurrentReportVariant(uint256 _index)
         external
-        view override
+        view
+        override
         returns (
             uint64 beaconBalance,
             uint32 beaconValidators,
@@ -283,42 +235,35 @@ contract Oracle is IOracle, AccessControl {
     }
 
     /**
-<<<<<<< HEAD
      * @notice Returns epoch that can be reported by oracles
      */
-    function getExpectedEpochId() external view returns (uint256) {
-=======
-    * @notice Returns epoch that can be reported by oracles
-    */
     function getExpectedEpochId() external view override returns (uint256) {
->>>>>>> f8b022c040d20a5a2b8c71c449d336a941b92fc3
         return EXPECTED_EPOCH_ID_POSITION.getStorageUint256();
     }
 
     /**
-<<<<<<< HEAD
      * @notice Return the current oracle member committee list
      */
-    function getOracleMembers() external view returns (address[] memory) {
-=======
-    * @notice Return the current oracle member committee list
-    */
-    function getOracleMembers() external view override returns (address[] memory) {
->>>>>>> f8b022c040d20a5a2b8c71c449d336a941b92fc3
+    function getOracleMembers()
+        external
+        view
+        override
+        returns (address[] memory)
+    {
         return members;
     }
 
     /**
-<<<<<<< HEAD
      * @notice Return the initialized version of this contract starting from 0
      */
-    function getVersion() external view returns (uint256) {
+    function getVersion() external view override returns (uint256) {
         return CONTRACT_VERSION_POSITION.getStorageUint256();
     }
 
     function getBeaconSpec()
         external
         view
+        override
         returns (
             uint64 epochsPerFrame,
             uint64 slotsPerEpoch,
@@ -326,15 +271,6 @@ contract Oracle is IOracle, AccessControl {
             uint64 genesisTime
         )
     {
-=======
-    * @notice Return the initialized version of this contract starting from 0
-    */
-    function getVersion() external view override returns (uint256) {
-        return CONTRACT_VERSION_POSITION.getStorageUint256();
-    }
-
-    function getBeaconSpec()external view override returns (uint64 epochsPerFrame, uint64 slotsPerEpoch, uint64 secondsPerSlot, uint64 genesisTime){
->>>>>>> f8b022c040d20a5a2b8c71c449d336a941b92fc3
         BeaconSpec memory beaconSpec = _getBeaconSpec();
         return (
             beaconSpec.epochsPerFrame,
@@ -352,14 +288,7 @@ contract Oracle is IOracle, AccessControl {
         uint64 _slotsPerEpoch,
         uint64 _secondsPerSlot,
         uint64 _genesisTime
-<<<<<<< HEAD
-    ) external onlyRole(SET_BEACON_SPEC) {
-=======
-    )
-        external override
-        onlyRole(SET_BEACON_SPEC)
-    {
->>>>>>> f8b022c040d20a5a2b8c71c449d336a941b92fc3
+    ) external override onlyRole(SET_BEACON_SPEC) {
         _setBeaconSpec(
             _epochsPerFrame,
             _slotsPerEpoch,
@@ -382,7 +311,8 @@ contract Oracle is IOracle, AccessControl {
      */
     function getCurrentFrame()
         external
-        view override
+        view
+        override
         returns (
             uint256 frameEpochId,
             uint256 frameStartTime,
@@ -409,7 +339,12 @@ contract Oracle is IOracle, AccessControl {
     /**
      * @notice Return last completed epoch
      */
-    function getLastCompletedEpochId() external view override returns (uint256) {
+    function getLastCompletedEpochId()
+        external
+        view
+        override
+        returns (uint256)
+    {
         return LAST_COMPLETED_EPOCH_ID_POSITION.getStorageUint256();
     }
 
@@ -418,7 +353,8 @@ contract Oracle is IOracle, AccessControl {
      */
     function getLastCompletedReportDelta()
         external
-        view override
+        view
+        override
         returns (
             uint256 postTotalPooledEther,
             uint256 preTotalPooledEther,
@@ -440,18 +376,11 @@ contract Oracle is IOracle, AccessControl {
     function initialize_v2(
         uint256 _allowedBeaconBalanceAnnualRelativeIncrease,
         uint256 _allowedBeaconBalanceRelativeDecrease
-<<<<<<< HEAD
-    ) external {
+    ) external override {
         require(
             CONTRACT_VERSION_POSITION.getStorageUint256() == 0,
             "ALREADY_INITIALIZED"
         );
-=======
-    )
-        external override
-    {
-        require(CONTRACT_VERSION_POSITION.getStorageUint256() == 0, "ALREADY_INITIALIZED");
->>>>>>> f8b022c040d20a5a2b8c71c449d336a941b92fc3
         CONTRACT_VERSION_POSITION.setStorageUint256(1);
         emit ContractVersionSet(1);
 
@@ -487,14 +416,11 @@ contract Oracle is IOracle, AccessControl {
     /**
      * @notice Add `_member` to the oracle member committee list
      */
-<<<<<<< HEAD
     function addOracleMember(address _member)
         external
+        override
         onlyRole(MANAGE_MEMBERS)
     {
-=======
-    function addOracleMember(address _member) external override onlyRole(MANAGE_MEMBERS) {
->>>>>>> f8b022c040d20a5a2b8c71c449d336a941b92fc3
         require(address(0) != _member, "BAD_ARGUMENT");
         require(MEMBER_NOT_FOUND == _getMemberId(_member), "MEMBER_EXISTS");
 
@@ -506,14 +432,11 @@ contract Oracle is IOracle, AccessControl {
     /**
      * @notice Remove '_member` from the oracle member committee list
      */
-<<<<<<< HEAD
     function removeOracleMember(address _member)
         external
+        override
         onlyRole(MANAGE_MEMBERS)
     {
-=======
-    function removeOracleMember(address _member) external override onlyRole(MANAGE_MEMBERS) {
->>>>>>> f8b022c040d20a5a2b8c71c449d336a941b92fc3
         uint256 index = _getMemberId(_member);
         require(index != MEMBER_NOT_FOUND, "MEMBER_NOT_FOUND");
         uint256 last = members.length - 1;
@@ -527,15 +450,13 @@ contract Oracle is IOracle, AccessControl {
     }
 
     /**
-<<<<<<< HEAD
      * @notice Set the number of exactly the same reports needed to finalize the epoch to `_quorum`
      */
-    function setQuorum(uint256 _quorum) external onlyRole(MANAGE_QUORUM) {
-=======
-    * @notice Set the number of exactly the same reports needed to finalize the epoch to `_quorum`
-    */
-    function setQuorum(uint256 _quorum) external override onlyRole(MANAGE_QUORUM) {
->>>>>>> f8b022c040d20a5a2b8c71c449d336a941b92fc3
+    function setQuorum(uint256 _quorum)
+        external
+        override
+        onlyRole(MANAGE_QUORUM)
+    {
         require(0 != _quorum, "QUORUM_WONT_BE_MADE");
         uint256 oldQuorum = QUORUM_POSITION.getStorageUint256();
         QUORUM_POSITION.setStorageUint256(_quorum);
@@ -558,7 +479,6 @@ contract Oracle is IOracle, AccessControl {
     }
 
     /**
-<<<<<<< HEAD
      * @notice Accept oracle committee member reports from the ETH 2.0 side
      * @param _epochId Beacon chain epoch
      * @param _beaconBalance Balance in gwei on the ETH 2.0 side (9-digit denomination)
@@ -568,15 +488,7 @@ contract Oracle is IOracle, AccessControl {
         uint256 _epochId,
         uint64 _beaconBalance,
         uint32 _beaconValidators
-    ) external {
-=======
-    * @notice Accept oracle committee member reports from the ETH 2.0 side
-    * @param _epochId Beacon chain epoch
-    * @param _beaconBalance Balance in gwei on the ETH 2.0 side (9-digit denomination)
-    * @param _beaconValidators Number of validators visible in this epoch
-    */
-    function reportBeacon(uint256 _epochId, uint64 _beaconBalance, uint32 _beaconValidators) external override {
->>>>>>> f8b022c040d20a5a2b8c71c449d336a941b92fc3
+    ) external override {
         BeaconSpec memory beaconSpec = _getBeaconSpec();
         uint256 expectedEpoch = EXPECTED_EPOCH_ID_POSITION.getStorageUint256();
         require(_epochId >= expectedEpoch, "EPOCH_IS_TOO_OLD");
@@ -652,7 +564,7 @@ contract Oracle is IOracle, AccessControl {
      */
     function _getBeaconSpec()
         internal
-        view 
+        view
         returns (BeaconSpec memory beaconSpec)
     {
         uint256 data = BEACON_SPEC_POSITION.getStorageUint256();
@@ -823,21 +735,14 @@ contract Oracle is IOracle, AccessControl {
             uint256 allowedAnnualRelativeIncreaseBp = ALLOWED_BEACON_BALANCE_ANNUAL_RELATIVE_INCREASE_POSITION
                     .getStorageUint256();
             // check that annualRelativeIncreaseBp <= allowedAnnualRelativeIncreaseBp
-<<<<<<< HEAD
             require(
-                uint256(10000 * 365 days).mul(
-                    _postTotalPooledEther - _preTotalPooledEther
-                ) <=
-                    allowedAnnualRelativeIncreaseBp
-                        .mul(_preTotalPooledEther)
-                        .mul(_timeElapsed),
+                uint256(10000 * 365 days) *
+                    (_postTotalPooledEther - _preTotalPooledEther) <=
+                    allowedAnnualRelativeIncreaseBp *
+                        (_preTotalPooledEther) *
+                        (_timeElapsed),
                 "ALLOWED_BEACON_BALANCE_INCREASE"
             );
-=======
-            require(uint256(10000 * 365 days) * (_postTotalPooledEther - _preTotalPooledEther) <=
-                    allowedAnnualRelativeIncreaseBp*(_preTotalPooledEther)*(_timeElapsed),
-                    "ALLOWED_BEACON_BALANCE_INCREASE");
->>>>>>> f8b022c040d20a5a2b8c71c449d336a941b92fc3
         } else {
             // decrease           = _preTotalPooledEther - _postTotalPooledEther
             // relativeDecrease   = decrease / _preTotalPooledEther
@@ -845,18 +750,12 @@ contract Oracle is IOracle, AccessControl {
             uint256 allowedRelativeDecreaseBp = ALLOWED_BEACON_BALANCE_RELATIVE_DECREASE_POSITION
                     .getStorageUint256();
             // check that relativeDecreaseBp <= allowedRelativeDecreaseBp
-<<<<<<< HEAD
             require(
-                uint256(10000).mul(
-                    _preTotalPooledEther - _postTotalPooledEther
-                ) <= allowedRelativeDecreaseBp.mul(_preTotalPooledEther),
+                uint256(10000) *
+                    (_preTotalPooledEther - _postTotalPooledEther) <=
+                    allowedRelativeDecreaseBp * (_preTotalPooledEther),
                 "ALLOWED_BEACON_BALANCE_DECREASE"
             );
-=======
-            require(uint256(10000)*(_preTotalPooledEther - _postTotalPooledEther) <=
-                    allowedRelativeDecreaseBp*(_preTotalPooledEther),
-                    "ALLOWED_BEACON_BALANCE_DECREASE");
->>>>>>> f8b022c040d20a5a2b8c71c449d336a941b92fc3
         }
     }
 
