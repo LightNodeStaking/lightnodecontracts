@@ -89,7 +89,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AccessControl, ArrConv
         LIGHT_NODE_POSITION.setStorageAddress(_slEth);
     }
 
-    function addNodeOperator(string memory _name, address _rewardAdd) external onlyRole(ADD_NODE_OPERATOR_ROLE) validAddress(_rewardAdd) returns(uint256 id){
+    function addNodeOperator(string memory _name, address _rewardAdd) external onlyRole(ADD_NODE_OPERATOR_ROLE) validAddress(_rewardAdd) override returns(uint256 id){
         id = getNodeOperatorsCount();
         TOTAL_OPERATORS_COUNT_POSITION.setStorageUint256(id + 1);
 
@@ -109,7 +109,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AccessControl, ArrConv
 
     }
 
-    function setNodeOperatorActive(uint _id, bool _active) external onlyRole(SET_NODE_OPERATOR_ACTIVE_ROLE) operatorExists(_id){
+    function setNodeOperatorActive(uint _id, bool _active) external onlyRole(SET_NODE_OPERATOR_ACTIVE_ROLE) override operatorExists(_id){
         _increaseKeysOpIndex();
 
         if(operators[_id].active != _active){
@@ -130,7 +130,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AccessControl, ArrConv
     */
     function setNodeOperatorName(uint256 _id, string memory _name) external
         onlyRole(SET_NODE_OPERATOR_NAME_ROLE)
-        operatorExists(_id)
+        operatorExists(_id) override
     {
         operators[_id].name = _name;
         emit NodeOperatorNameSet(_id, _name);
@@ -142,7 +142,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AccessControl, ArrConv
     function setNodeOperatorRewardAddress(uint256 _id, address _rewardAddress) external
         onlyRole(SET_NODE_OPERATOR_ADDRESS_ROLE)
         operatorExists(_id)
-        validAddress(_rewardAddress)
+        validAddress(_rewardAddress) override
     {
         operators[_id].rewardAddress = _rewardAddress;
         emit NodeOperatorRewardAddressSet(_id, _rewardAddress);
@@ -153,7 +153,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AccessControl, ArrConv
     */
     function reportStoppedValidators(uint256 _id, uint64 _stoppedIncrement) external
         onlyRole(REPORT_STOPPED_VALIDATORS_ROLE)
-        operatorExists(_id)
+        operatorExists(_id) override
     {
         require(0 != _stoppedIncrement, "EMPTY_VALUE");
         operators[_id].stoppedValidators = operators[_id].stoppedValidators + (_stoppedIncrement);
@@ -167,7 +167,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AccessControl, ArrConv
     * @notice Remove unused signing keys
     * @dev Function is used by the Lido contract
     */
-    function trimUnusedKeys() external onlyLightNode {
+    function trimUnusedKeys() external onlyLightNode override {
         uint256 length = getNodeOperatorsCount();
         for (uint256 operatorId = 0; operatorId < length; ++operatorId) {
             uint64 totalSigningKeys = operators[operatorId].totalSigningKeys;
@@ -191,7 +191,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AccessControl, ArrConv
     * @param _signatures Several concatenated signatures for (pubkey, withdrawal_credentials, 32000000000) messages
     */
     function addSigningKeys(uint256 _operator_id, uint256 _quantity, bytes memory _pubkeys, bytes memory _signatures) external
-        onlyRole(MANAGE_SIGNING_KEYS)
+        onlyRole(MANAGE_SIGNING_KEYS) override
     {
         _addSigningKeys(_operator_id, _quantity, _pubkeys, _signatures);
     }
@@ -213,7 +213,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AccessControl, ArrConv
         bytes memory _pubkeys,
         bytes memory _signatures
     )
-        external
+        external override
     {
         require(msg.sender == operators[_operator_id].rewardAddress, "APP_AUTH_FAILED");
         _addSigningKeys(_operator_id, _quantity, _pubkeys, _signatures);
@@ -226,7 +226,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AccessControl, ArrConv
     */
     function removeSigningKey(uint256 _operator_id, uint256 _index)
         external
-        onlyRole(MANAGE_SIGNING_KEYS)
+        onlyRole(MANAGE_SIGNING_KEYS) override
     {
         _removeSigningKey(_operator_id, _index);
     }
@@ -252,7 +252,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AccessControl, ArrConv
     * @param _operator_id Node Operator id
     * @param _index Index of the key, starting with 0
     */
-    function removeSigningKeyOperatorBH(uint256 _operator_id, uint256 _index) external {
+    function removeSigningKeyOperatorBH(uint256 _operator_id, uint256 _index) external override {
         require(msg.sender == operators[_operator_id].rewardAddress, "APP_AUTH_FAILED");
         _removeSigningKey(_operator_id, _index);
     }
@@ -365,7 +365,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AccessControl, ArrConv
     * @notice Returns the rewards distribution proportional to the effective stake for each node operator.
     * @param _totalRewardShares Total amount of reward shares to distribute.
     */
-    function getRewardsDistribution(uint256 _totalRewardShares) external view
+    function getRewardsDistribution(uint256 _totalRewardShares) external override view
         returns (
             address[] memory recipients,
             uint256[] memory shares
@@ -405,17 +405,12 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AccessControl, ArrConv
         return (recipients, shares);
     }
 
-
-
-
-
-
     /**
     * @notice Set the maximum number of validators to stake for the node operator #`_id` to `_stakingLimit`
     */
-    function setNodeOperatorStakingLimit(uint256 _id, uint64 _stakingLimit) external
+    function setNodeOperatorStakingLimit(uint256 _id, uint64 _stakingLimit) external 
         onlyRole(SET_NODE_OPERATOR_LIMIT_ROLE)
-        operatorExists(_id)
+        operatorExists(_id) override
     {
         _increaseKeysOpIndex();
         operators[_id].stakingLimit = _stakingLimit;
@@ -439,14 +434,14 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AccessControl, ArrConv
     *   4. a node operator was activated/deactivated. Activation or deactivation of node operator
     *      might lead to usage of unvalidated keys in the assignNextSigningKeys method.
     */
-    function getKeysOpIndex() public view returns (uint256) {
+    function getKeysOpIndex() public view override returns (uint256) {
         return KEYS_OP_INDEX_POSITION.getStorageUint256();
     }
 
     /**
     * @notice Returns total number of node operators
     */
-    function getNodeOperatorsCount() public view returns (uint256) {
+    function getNodeOperatorsCount() public view override returns (uint256) {
         return TOTAL_OPERATORS_COUNT_POSITION.getStorageUint256();
     }
 
@@ -461,7 +456,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AccessControl, ArrConv
     * @param _fullInfo If true, name will be returned as well
     */
     function getNodeOperator(uint256 _id, bool _fullInfo) external view
-        operatorExists(_id)
+        operatorExists(_id) override
         returns
         (
             bool active,
@@ -487,14 +482,14 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AccessControl, ArrConv
     /**
     * @notice Returns total number of signing keys of the node operator #`_operator_id`
     */
-    function getTotalSigningKeyCount(uint256 _operator_id) external view operatorExists(_operator_id) returns (uint256) {
+    function getTotalSigningKeyCount(uint256 _operator_id) external override view operatorExists(_operator_id) returns (uint256) {
         return operators[_operator_id].totalSigningKeys;
     }
 
     /**
       * @notice Returns number of usable signing keys of the node operator #`_operator_id`
       */
-    function getUnusedSigningKeyCount(uint256 _operator_id) external view operatorExists(_operator_id) returns (uint256) {
+    function getUnusedSigningKeyCount(uint256 _operator_id) external override view operatorExists(_operator_id) returns (uint256) {
         return operators[_operator_id].totalSigningKeys - (operators[_operator_id].usedSigningKeys);
     }
 
@@ -506,7 +501,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AccessControl, ArrConv
     * @return depositSignature Signature needed for a deposit_contract.deposit call
     * @return used Flag indication if the key was used in the staking
     */
-    function getSigningKey(uint256 _operator_id, uint256 _index) external view
+    function getSigningKey(uint256 _operator_id, uint256 _index) external override view
         operatorExists(_operator_id)
         returns (bytes memory key, bytes memory depositSignature, bool used)
     {

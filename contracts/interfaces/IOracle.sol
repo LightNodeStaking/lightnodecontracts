@@ -45,7 +45,7 @@ interface IOracle {
     /**
      * @notice Return the Lido contract address
      */
-    function getLido() external view returns (IStaking);
+    function getLightNode() external view returns (IStaking);
 
     /**
      * @notice Return the number of exactly the same reports needed to finalize the epoch
