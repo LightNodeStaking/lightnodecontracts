@@ -131,7 +131,7 @@ abstract contract SLETH is IERC20, Pausable {
         return true;
     }
 
-    function getTotalShares() public view returns (uint256) {
+    function getTotalShares() public view virtual returns (uint256) {
         return _getTotalShares();
     }
 
@@ -173,7 +173,7 @@ abstract contract SLETH is IERC20, Pausable {
         return _balances[_account];
     }
 
-    //_getTotalPooledEther() function needs tro be implemented in teh main contract.
+    //_getTotalPooledEther() function needs too be implemented in the main contract.
     // further testing will be required at the master contract testing stage.
 
     function _getTotalPooledEther() internal view virtual returns (uint256);

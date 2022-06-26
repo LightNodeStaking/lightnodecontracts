@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 import "../interfaces/IStaking.sol";
 import "../token/SLETH.sol";
 
-contract Staking is IStaking {
+contract Staking is IStaking, SLETH {
     address public owner;
     address public devAddress;
     uint256 public fee = 75; //7.5% fees
@@ -161,11 +161,15 @@ contract Staking is IStaking {
         devAddress = _newDevAddress;
     }
 
-    function balanceOf(address _user) public view override returns (uint256) {
-        return stakingBalance[ETHER][_user];
-    }
+    // function balanceOf(address _user) public view override returns (uint256) {
+    //     return stakingBalance[ETHER][_user];
+    // }
 
     function stillStaking() public view override returns (bool) {
         return isStaking[msg.sender];
     }
+
+    //     function getTotalShares() public virtual override returns (uint256) {
+    //         super.getTotalShares();
+    //     }
 }
