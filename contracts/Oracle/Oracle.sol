@@ -11,6 +11,7 @@ import "@openzeppelin/contracts/access/AccessControl.sol";
 contract Oracle is IOracle, AccessControl {
     using ReportUtils for uint256;
     using UnStructuredData for bytes32;
+
     struct BeaconSpec {
         uint64 epochsPerFrame;
         uint64 slotsPerEpoch;
@@ -176,7 +177,10 @@ contract Oracle is IOracle, AccessControl {
         override
         returns (address)
     {
-        return address(BEACON_REPORT_RECEIVER_POSITION.getStorageUint256());
+        return
+            address(
+                uint160(BEACON_REPORT_RECEIVER_POSITION.getStorageUint256())
+            );
     }
 
     /**
@@ -188,7 +192,7 @@ contract Oracle is IOracle, AccessControl {
         override
         onlyRole(SET_BEACON_REPORT_RECEIVER)
     {
-        BEACON_REPORT_RECEIVER_POSITION.setStorageUint256(uint256(_addr));
+        BEACON_REPORT_RECEIVER_POSITION.setStorageUint256(uint160(_addr));
         emit BeaconReportReceiverSet(_addr);
     }
 
@@ -441,7 +445,7 @@ contract Oracle is IOracle, AccessControl {
         require(index != MEMBER_NOT_FOUND, "MEMBER_NOT_FOUND");
         uint256 last = members.length - 1;
         if (index != last) members[index] = members[last];
-        members.length--;
+        delete members[index];
         emit MemberRemoved(_member);
 
         // delete the data for the last epoch, let remained oracles report it again
@@ -695,7 +699,7 @@ contract Oracle is IOracle, AccessControl {
             lightNode.getTotalShares()
         );
         IBeaconReportReceiver receiver = IBeaconReportReceiver(
-            BEACON_REPORT_RECEIVER_POSITION.getStorageUint256()
+            BEACON_REPORT_RECEIVER_POSITION.getStorageAddress()
         );
         if (address(receiver) != address(0)) {
             receiver.processLidoOracleReport(
