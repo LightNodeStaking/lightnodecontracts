@@ -10,11 +10,11 @@ interface IStaking {
 
     function stillStaking() external view returns (bool);
 
-    function balanceOf(address _user) external view returns (uint256);
+    //function balanceOf(address _user) external view returns (uint256);
 
-    function totalSupply() external view returns (uint256);
+    function totalSupplyToken() external view returns (uint256);
 
     function pushBeacon(uint256 epoch, uint256 eth2Bal) external;
 
-    function getTotalShares() external view returns (uint256);
+    function getTotalSharesOfPool() external view returns (uint256);
 }

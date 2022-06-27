@@ -667,9 +667,9 @@ contract Oracle is IOracle, AccessControl {
 
         // report to the Node and collect stats
         IStaking lightNode = getLightNode();
-        uint256 prevTotalPooledEther = lightNode.totalSupply();
+        uint256 prevTotalPooledEther = lightNode.totalSupplyToken();
         lightNode.pushBeacon(_beaconValidators, _beaconBalanceEth1);
-        uint256 postTotalPooledEther = lightNode.totalSupply();
+        uint256 postTotalPooledEther = lightNode.totalSupplyToken();
 
         PRE_COMPLETED_TOTAL_POOLED_ETHER_POSITION.setStorageUint256(
             prevTotalPooledEther
@@ -696,7 +696,7 @@ contract Oracle is IOracle, AccessControl {
             postTotalPooledEther,
             prevTotalPooledEther,
             timeElapsed,
-            lightNode.getTotalShares()
+            lightNode.getTotalSharesOfPool()
         );
         IBeaconReportReceiver receiver = IBeaconReportReceiver(
             BEACON_REPORT_RECEIVER_POSITION.getStorageAddress()

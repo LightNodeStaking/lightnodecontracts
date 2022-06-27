@@ -1,24 +1,24 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-interface SLETHInterface {
-    function balanceOf(address owner) external view returns (uint256);
+interface ISLETH {
+    //function balanceOf(address owner) external view returns (uint256);
 
-    function transfer(address recipient, uint256 amount)
+    /*function transfer(address recipient, uint256 amount)
         external
-        returns (bool);
+        returns (bool);*/
 
-    function allowance(address owner, address spender)
+    /*function allowance(address owner, address spender)
         external
-        returns (uint256);
+        returns (uint256);*/
 
-    function approve(address spender, uint256 amount) external returns (bool);
+    /*function approve(address spender, uint256 amount) external returns (bool);*/
 
-    function transferFrom(
+    /*function transferFrom(
         address sender,
         address recipient,
         uint256 amount
-    ) external returns (bool);
+    ) external returns (bool);*/
 
     function increaseAllowance(address spender, uint256 addedValue)
         external

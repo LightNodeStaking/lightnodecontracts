@@ -36,10 +36,11 @@ interface IOracle {
         uint128 beaconValidators
     );
     event PostTotalShares(
-         uint256 postTotalPooledEther,
-         uint256 preTotalPooledEther,
-         uint256 timeElapsed,
-         uint256 totalShares);
+        uint256 postTotalPooledEther,
+        uint256 preTotalPooledEther,
+        uint256 timeElapsed,
+        uint256 totalShares
+    );
     event ContractVersionSet(uint256 version);
 
     /**
@@ -55,17 +56,24 @@ interface IOracle {
     /**
      * @notice Return the upper bound of the reported balance possible increase in APR
      */
-    function getAllowedBeaconBalanceAnnualRelativeIncrease() external view returns (uint256);
+    function getAllowedBeaconBalanceAnnualRelativeIncrease()
+        external
+        view
+        returns (uint256);
 
     /**
      * @notice Return the lower bound of the reported balance possible decrease
      */
-    function getAllowedBeaconBalanceRelativeDecrease() external view returns (uint256);
+    function getAllowedBeaconBalanceRelativeDecrease()
+        external
+        view
+        returns (uint256);
 
     /**
      * @notice Set the upper bound of the reported balance possible increase in APR to `_value`
      */
-    function setAllowedBeaconBalanceAnnualRelativeIncrease(uint256 _value) external;
+    function setAllowedBeaconBalanceAnnualRelativeIncrease(uint256 _value)
+        external;
 
     /**
      * @notice Set the lower bound of the reported balance possible decrease to `_value`
@@ -141,8 +149,7 @@ interface IOracle {
         uint64 _slotsPerEpoch,
         uint64 _secondsPerSlot,
         uint64 _genesisTime
-    )
-        external;
+    ) external;
 
     /**
      * Returns the epoch calculated from current timestamp
@@ -187,8 +194,7 @@ interface IOracle {
     function initialize_v2(
         uint256 _allowedBeaconBalanceAnnualRelativeIncrease,
         uint256 _allowedBeaconBalanceRelativeDecrease
-    )
-        external;
+    ) external;
 
     /**
      * @notice Add `_member` to the oracle member committee list
@@ -211,5 +217,9 @@ interface IOracle {
      * @param _beaconBalance Balance in gwei on the ETH 2.0 side (9-digit denomination)
      * @param _beaconValidators Number of validators visible in this epoch
      */
-    function reportBeacon(uint256 _epochId, uint64 _beaconBalance, uint32 _beaconValidators) external;
+    function reportBeacon(
+        uint256 _epochId,
+        uint64 _beaconBalance,
+        uint32 _beaconValidators
+    ) external;
 }
