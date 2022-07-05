@@ -99,6 +99,10 @@ contract Oracle is IOracle, AccessControl {
     address[] private members; // slot 0: oracle committee members
     uint256[] private currentReportVariants; // slot 1: reporting storage
 
+    constructor() {
+        _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
+    }
+    
     /**
      * @notice Return the LightNode contract address
      */
