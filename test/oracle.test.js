@@ -81,7 +81,7 @@ describe("Oracle Test Suite", () => {
             ).to.be.revertedWith("BAD_ARGUMENT");
         });
 
-        it("addOracleMember works", async () => {
+        it("emits MemberAdded event", async () => {
             await expect(
                 oracle.connect(voting).addOracleMember(user1.address)
             ).to.emit(oracle, "MemberAdded").withArgs(user1.address); 
@@ -103,10 +103,41 @@ describe("Oracle Test Suite", () => {
             ).to.be.revertedWith("MEMBER_NOT_FOUND");
         });
 
-        it("removeOracleMember works", async () => {
+        it("emits MemberRemoved event", async () => {
             await expect(
                 oracle.connect(voting).removeOracleMember(user2.address)
             ).to.emit(oracle, "MemberRemoved").withArgs(user2.address); 
+        });
+    });
+
+    describe("Quorum", () => {
+        before(async() => {
+            const manageQuorumRole = await oracle.MANAGE_QUORUM();
+            await oracle.connect(deployer).grantRole(manageQuorumRole, voting.address);
+        });
+
+        it("reverts if the caller has no right role", async() => {
+            await expect(
+                oracle.connect(user1).setQuorum(2)
+            ).to.be.reverted;
+        });
+
+        it("reverts if quorum number is zero", async() => {
+            await expect(
+                oracle.connect(voting).setQuorum(0)
+            ).to.be.revertedWith("QUORUM_WONT_BE_MADE");
+        });
+
+        it("emit QuorumChanged event", async() => {
+            await expect(
+                oracle.connect(voting).setQuorum(2)
+            ).to.emit(oracle, "QuorumChanged").withArgs(2);
+        });
+
+        it("getQuorum", async() => {
+            expect(
+                await oracle.connect(voting).getQuorum()
+            ).to.be.equal(2);
         });
     });
 });
