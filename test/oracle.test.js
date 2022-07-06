@@ -4,14 +4,14 @@ const Table = require("cli-table3");
 
 describe("Oracle Test Suite", () => {
     let oracle;
-    let deployer, voting;
+    let deployer, voting, user1, user2, user3;
     let table = new Table({
         head: ['Contracts', 'contract addresses'],
         colWidths: ['auto', 'auto']
     });
 
     before(async () => {
-        [deployer, voting] = await ethers.getSigners();
+        [deployer, voting, user1, user2, user3] = await ethers.getSigners();
         const OracleFactory = await ethers.getContractFactory("Oracle");
         oracle = await OracleFactory.deploy();
         await oracle.deployed();
@@ -22,7 +22,7 @@ describe("Oracle Test Suite", () => {
         // await oracle.initialize_v2(1000, 500);
     });
 
-    describe("setBeaconSpec", () => {
+    describe("BeaconSpec", () => {
         it("reverts if the caller has no right role", async() => {
             await expect(
                 oracle.connect(voting).setBeaconSpec(0, 1, 1, 1)
@@ -60,6 +60,53 @@ describe("Oracle Test Suite", () => {
             expect(beaconSpec.slotsPerEpoch).to.equal(1);
             expect(beaconSpec.secondsPerSlot).to.equal(1);
             expect(beaconSpec.genesisTime).to.equal(1);
+        });
+    });
+
+    describe("OracleMember", () => {
+        before(async() => {
+            const manageMembersRole = await oracle.MANAGE_MEMBERS();
+            await oracle.connect(deployer).grantRole(manageMembersRole, voting.address);
+        });
+
+        it("reverts if the caller has no right role", async() => {
+            await expect(
+                oracle.connect(user1).addOracleMember(user1.address)
+            ).to.be.reverted;
+        });
+
+        it("reverts if member's address is zero", async () => {
+            await expect(
+                oracle.connect(voting).addOracleMember("0x0000000000000000000000000000000000000000")
+            ).to.be.revertedWith("BAD_ARGUMENT");
+        });
+
+        it("addOracleMember works", async () => {
+            await expect(
+                oracle.connect(voting).addOracleMember(user1.address)
+            ).to.emit(oracle, "MemberAdded").withArgs(user1.address); 
+
+            await expect(
+                oracle.connect(voting).addOracleMember(user2.address)
+            ).to.emit(oracle, "MemberAdded").withArgs(user2.address); 
+        });
+
+        it("reverts if member's address already exists", async () => {
+            await expect(
+                oracle.connect(voting).addOracleMember(user1.address)
+            ).to.be.revertedWith("MEMBER_EXISTS");
+        });
+
+        it("removeOracleMember reverts if member's address is not found", async () => {
+            await expect(
+                oracle.connect(voting).removeOracleMember(user3.address)
+            ).to.be.revertedWith("MEMBER_NOT_FOUND");
+        });
+
+        it("removeOracleMember works", async () => {
+            await expect(
+                oracle.connect(voting).removeOracleMember(user2.address)
+            ).to.emit(oracle, "MemberRemoved").withArgs(user2.address); 
         });
     });
 });
