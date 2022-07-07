@@ -2,17 +2,20 @@ const { expect } = require("chai");
 const { ethers } = require("hardhat");
 const Table = require("cli-table3");
 
+const GENESIS_TIME = 1606824000
+const EPOCH_LENGTH = 32 * 12
+
 describe("Oracle Test Suite", () => {
     let oracle;
-    let deployer, voting, user1, user2, user3;
+    let deployer, voting, user1, user2, user3, user4;
     let table = new Table({
         head: ['Contracts', 'contract addresses'],
         colWidths: ['auto', 'auto']
     });
 
     before(async () => {
-        [deployer, voting, user1, user2, user3] = await ethers.getSigners();
-        const OracleFactory = await ethers.getContractFactory("Oracle");
+        [deployer, voting, user1, user2, user3, user4] = await ethers.getSigners();
+        const OracleFactory = await ethers.getContractFactory("OracleMock");
         oracle = await OracleFactory.deploy();
         await oracle.deployed();
 
@@ -89,6 +92,10 @@ describe("Oracle Test Suite", () => {
             await expect(
                 oracle.connect(voting).addOracleMember(user2.address)
             ).to.emit(oracle, "MemberAdded").withArgs(user2.address); 
+
+            await expect(
+                oracle.connect(voting).addOracleMember(user3.address)
+            ).to.emit(oracle, "MemberAdded").withArgs(user3.address);
         });
 
         it("reverts if member's address already exists", async () => {
@@ -99,14 +106,14 @@ describe("Oracle Test Suite", () => {
 
         it("removeOracleMember reverts if member's address is not found", async () => {
             await expect(
-                oracle.connect(voting).removeOracleMember(user3.address)
+                oracle.connect(voting).removeOracleMember(user4.address)
             ).to.be.revertedWith("MEMBER_NOT_FOUND");
         });
 
         it("emits MemberRemoved event", async () => {
             await expect(
-                oracle.connect(voting).removeOracleMember(user2.address)
-            ).to.emit(oracle, "MemberRemoved").withArgs(user2.address); 
+                oracle.connect(voting).removeOracleMember(user3.address)
+            ).to.emit(oracle, "MemberRemoved").withArgs(user3.address); 
         });
     });
 
@@ -138,6 +145,42 @@ describe("Oracle Test Suite", () => {
             expect(
                 await oracle.connect(voting).getQuorum()
             ).to.be.equal(2);
+        });
+    });
+
+    describe("EpochId", () => {
+        before(async() => {
+            await oracle.setTime(GENESIS_TIME);
+            await oracle.connect(voting).setBeaconSpec(1, 32, 12, GENESIS_TIME);
+            await oracle.initialize_v2(1000, 500);
+            await oracle.connect(voting).setQuorum(2);
+
+            await oracle.connect(user1).reportBeacon(1, 31, 1);
+            await oracle.connect(user2).reportBeacon(1, 32, 1);
+        });
+
+        it("getCurrentEpochId", async() => {
+            expect(await oracle.getCurrentEpochId()).to.equal(0);
+            await oracle.setTime(GENESIS_TIME + EPOCH_LENGTH - 1);
+            expect(await oracle.getCurrentEpochId()).to.equal(0);
+            await oracle.setTime(GENESIS_TIME + EPOCH_LENGTH * 123 + 1);
+            expect(await oracle.getCurrentEpochId()).to.equal(123);
+        });
+
+        it("getExpectedEpochId and getLastCompletedEpochId", async() => {
+            expect(await oracle.getExpectedEpochId()).to.equal(1);
+            expect(await oracle.getLastCompletedEpochId()).to.equal(0);
+
+            await oracle.setTime(GENESIS_TIME + EPOCH_LENGTH - 1);
+            expect(await oracle.getExpectedEpochId()).to.equal(1);
+
+            await oracle.setTime(GENESIS_TIME + EPOCH_LENGTH * 123 + 1);
+            await oracle.connect(voting).setQuorum(1);
+            await oracle.connect(voting).removeOracleMember(user2.address);
+            // cant test for now, related staking contract
+            /* await oracle.connect(user1).reportBeacon(123, 32, 1);
+            expect(await oracle.getExpectedEpochId()).to.equal(124);
+            expect(await oracle.getLastCompletedEpochId()).to.equal(123); */
         });
     });
 });
