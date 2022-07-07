@@ -799,7 +799,7 @@ contract Oracle is IOracle, AccessControl {
     function _getFrameFirstEpochId(
         uint256 _epochId,
         BeaconSpec memory _beaconSpec
-    ) internal view returns (uint256) {
+    ) internal pure returns (uint256) {
         return
             (_epochId / _beaconSpec.epochsPerFrame) *
             _beaconSpec.epochsPerFrame;
@@ -808,7 +808,7 @@ contract Oracle is IOracle, AccessControl {
     /**
      * @notice Return the current timestamp
      */
-    function _getTime() internal view returns (uint256) {
+    function _getTime() internal view virtual returns (uint256) {
         return block.timestamp;
     }
 }
