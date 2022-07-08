@@ -182,5 +182,20 @@ describe("Oracle Test Suite", () => {
             expect(await oracle.getExpectedEpochId()).to.equal(124);
             expect(await oracle.getLastCompletedEpochId()).to.equal(123); */
         });
+
+        it("getCurrentFrame", async() => {
+            await oracle.connect(voting).setBeaconSpec(10, 32, 12, GENESIS_TIME);
+            await oracle.setTime(GENESIS_TIME + EPOCH_LENGTH * 10 - 1);
+            let result = await oracle.getCurrentFrame();
+            expect(result.frameEpochId).to.equal(0);
+            expect(result.frameStartTime).to.equal(GENESIS_TIME);
+            expect(result.frameEndTime).to.equal(GENESIS_TIME + EPOCH_LENGTH * 10 - 1);
+            
+            await oracle.setTime(GENESIS_TIME + EPOCH_LENGTH * 123);
+            result = await oracle.getCurrentFrame();
+            expect(result.frameEpochId).to.equal(120);
+            expect(result.frameStartTime).to.equal(GENESIS_TIME + EPOCH_LENGTH * 120);
+            expect(result.frameEndTime).to.equal(GENESIS_TIME + EPOCH_LENGTH * 130 - 1);
+        });
     });
 });
