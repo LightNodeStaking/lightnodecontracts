@@ -1,12 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
+import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "../interfaces/IStaking.sol";
 import "../token/SLETH.sol";
 import "../lib/UnStructuredData.sol";
 import "../interfaces/ILidoExecutionLayerRewardsVault.sol";
+import "../interfaces/INodeOperatorsRegistry.sol";
 
 contract Staking is IStaking, SLETH {
+    using SafeMath for uint256;
     using UnStructuredData for bytes32;
 
     address public owner;
@@ -135,6 +138,10 @@ contract Staking is IStaking, SLETH {
         emit TransferSleth(msg.sender, msg.value, block.timestamp);
     }
 
+    function totalSupply() public view override(IStaking, SLETH) returns (uint256) {
+        return SLETH.totalSupply();
+    }
+
     /*This is for users only. Users can call this function to withdraw their staked eth.
       Commenting out this function for now. We would have to decide whether we want to give user slETH or just give them options to withdraw. 
       We can not have both these options. Otherwise, user will be able to trade their slETH to eth and claim the eth they staked as well.
@@ -162,7 +169,7 @@ contract Staking is IStaking, SLETH {
         emit ClaimRewards(msg.sender, rewardPerUser);
     }
 
-    function pushBeacon(uint256 epoch, uint256 eth2Bal) external;
+    // function pushBeacon(uint256 epoch, uint256 eth2Bal) external;
 
     /* calculateRewards will calculate the user reward based on eth satked by the user/ total staked eth. */
     function calculateRewards(address _user) internal returns (uint256) {
@@ -218,9 +225,9 @@ contract Staking is IStaking, SLETH {
         return isStaking[msg.sender];
     }
 
-    //     function getTotalShares() public virtual override returns (uint256) {
-    //         super.getTotalShares();
-    //     }
+    function getTotalShares() public view override(IStaking, SLETH) returns (uint256) {
+       return SLETH.getTotalShares();
+    }
 
     function getOracle() public view returns (address) {
         return ORACLE_POSITION.getStorageAddress();
@@ -228,6 +235,14 @@ contract Staking is IStaking, SLETH {
 
     function getBufferedEther() external view returns (uint256) {
         return _getBufferedEther();
+    }
+
+    /**
+    * @dev Gets the total amount of Ether controlled by the system
+    * @return total balance in wei
+    */
+    function _getTotalPooledEther() internal view override returns (uint256) {
+        return _getBufferedEther() + BEACON_BALANCE_POSITION.getStorageUint256();
     }
 
     function pushBeacon(uint256 _beaconValidators, uint256 _beaconBalance)
@@ -249,9 +264,9 @@ contract Staking is IStaking, SLETH {
             _beaconValidators >= beaconValidators,
             "REPORTED_LESS_VALIDATORS"
         );
-        uint256 appearedValidators = _beaconValidators.sub(beaconValidators);
+        uint256 appearedValidators = _beaconValidators - beaconValidators;
 
-        uint256 rewardBase = (appearedValidators.mul(DEPOSIT_SIZE)).add(
+        uint256 rewardBase = (appearedValidators * DEPOSIT_SIZE) + (
             BEACON_BALANCE_POSITION.getStorageUint256()
         );
 
@@ -272,14 +287,14 @@ contract Staking is IStaking, SLETH {
 
             if (executionLayerRewards != 0) {
                 BUFFERED_ETHER_POSITION.setStorageUint256(
-                    _getBufferedEther().add(executionLayerRewards)
+                    _getBufferedEther() + executionLayerRewards
                 );
             }
         }
 
         if (_beaconBalance > rewardBase) {
-            uint256 rewards = _beaconBalance.sub(rewardBase);
-            distributeFee(rewards.add(executionLayerRewards));
+            uint256 rewards = _beaconBalance - rewardBase;
+            distributeFee(rewards + executionLayerRewards);
         }
     }
 
@@ -331,7 +346,7 @@ contract Staking is IStaking, SLETH {
 
         // Mint the calculated amount of shares to this contract address. This will reduce the
         // balances of the holders, as if the fee was taken in parts from each of them.
-        _mintShares(address(this), shares2mint);
+        // _mintShares(address(this), shares2mint);
 
         (
             ,
@@ -392,7 +407,7 @@ contract Staking is IStaking, SLETH {
         internal
     {
         emit Transfer(address(0), _to, getPooledEthByShares(_sharesAmount));
-        emit TransferShares(address(0), _to, _sharesAmount);
+        // emit TransferShares(address(0), _to, _sharesAmount);
     }
 
     function getOperators() public view returns (INodeOperatorsRegistry) {
@@ -423,7 +438,7 @@ contract Staking is IStaking, SLETH {
         return TREASURY_POSITION.getStorageAddress();
     }
 
-    function _submit(address _referral) internal returns (uint256) {
+    /* function _submit(address _referral) internal returns (uint256) {
         require(msg.value != 0, "ZERO_DEPOSIT");
 
         StakeLimitState.Data memory stakeLimitData = STAKING_STATE_POSITION
@@ -459,5 +474,5 @@ contract Staking is IStaking, SLETH {
 
         _emitTransferAfterMintingShares(msg.sender, sharesAmount);
         return sharesAmount;
-    }
+    } */
 }
