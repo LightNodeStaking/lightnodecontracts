@@ -178,8 +178,11 @@ abstract contract SLETH is ISLETH, IERC20, Pausable {
         return _balances[_account];
     }
 
-    //_getTotalPooledEther() function needs too be implemented in the main contract.
-    // further testing will be required at the master contract testing stage.
+    /**
+     * @return the total amount (in wei) of Ether controlled by the protocol.
+     * @dev This is used for calculating tokens from shares and vice versa.
+     * @dev This function is required to be implemented in a derived contract.
+     */
 
     function _getTotalPooledEther() internal view virtual returns (uint256);
 
