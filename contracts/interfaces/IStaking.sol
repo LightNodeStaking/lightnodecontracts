@@ -8,7 +8,13 @@ interface IStaking {
 
     function setDevAddress(address _newDevAddress) external;
 
-    function balanceOf(address _user) external view returns (uint256);
-
     function stillStaking() external view returns (bool);
+
+    //function balanceOf(address _user) external view returns (uint256);
+
+    function totalSupplyToken() external view returns (uint256);
+
+    function pushBeacon(uint256 epoch, uint256 eth2Bal) external;
+
+    function getTotalSharesOfPool() external view returns (uint256);
 }

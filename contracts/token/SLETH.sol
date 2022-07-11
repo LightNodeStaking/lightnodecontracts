@@ -4,8 +4,9 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 import "../lib/UnStructuredData.sol";
+import "../interfaces/ISLETH.sol";
 
-abstract contract SLETH is IERC20, Pausable {
+abstract contract SLETH is ISLETH, IERC20, Pausable {
     using UnStructuredData for bytes32;
     mapping(address => uint256) public _balances;
 
@@ -36,7 +37,7 @@ abstract contract SLETH is IERC20, Pausable {
         return _getTotalPooledEther();
     }
 
-    function getTotalPooledEther() public view returns (uint256) {
+    function getTotalPooledEther() public view override returns (uint256) {
         return _getTotalPooledEther();
     }
 
@@ -104,6 +105,7 @@ abstract contract SLETH is IERC20, Pausable {
     function increaseAllowance(address spender, uint256 addedValue)
         public
         virtual
+        override
         returns (bool)
     {
         _approve(
@@ -117,6 +119,7 @@ abstract contract SLETH is IERC20, Pausable {
     function decreaseAllowance(address spender, uint256 subtractedValue)
         public
         virtual
+        override
         returns (bool)
     {
         uint256 currentAllowance = _allowances[msg.sender][spender];
@@ -131,7 +134,7 @@ abstract contract SLETH is IERC20, Pausable {
         return true;
     }
 
-    function getTotalShares() public view returns (uint256) {
+    function getTotalShares() public view virtual override returns (uint256) {
         return _getTotalShares();
     }
 
@@ -142,6 +145,7 @@ abstract contract SLETH is IERC20, Pausable {
     function getSharesByPooledEth(uint256 _ethAmount)
         public
         view
+        override
         returns (uint256)
     {
         uint256 totalPooledEther = _getTotalPooledEther();
@@ -155,6 +159,7 @@ abstract contract SLETH is IERC20, Pausable {
     function getPooledEthByShares(uint256 _sharesAmount)
         public
         view
+        override
         returns (uint256)
     {
         uint256 totalShares = _getTotalShares();
@@ -173,7 +178,7 @@ abstract contract SLETH is IERC20, Pausable {
         return _balances[_account];
     }
 
-    //_getTotalPooledEther() function needs tro be implemented in teh main contract.
+    //_getTotalPooledEther() function needs too be implemented in the main contract.
     // further testing will be required at the master contract testing stage.
 
     function _getTotalPooledEther() internal view virtual returns (uint256);

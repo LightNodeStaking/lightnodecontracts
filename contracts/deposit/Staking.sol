@@ -3,8 +3,12 @@ pragma solidity ^0.8.0;
 
 import "../interfaces/IStaking.sol";
 import "../token/SLETH.sol";
+import "../lib/UnStructuredData.sol";
+import "../interfaces/ILidoExecutionLayerRewardsVault.sol";
 
-contract Staking is IStaking {
+contract Staking is IStaking, SLETH {
+    using UnStructuredData for bytes32;
+
     address public owner;
     address public devAddress;
     uint256 public fee = 75; //7.5% fees
@@ -22,6 +26,49 @@ contract Staking is IStaking {
     mapping(address => uint256) public rewardBalance;
     mapping(address => bool) public isStaking;
     mapping(address => bool) public hasStaked;
+
+    uint256 internal constant TOTAL_BASIS_POINTS = 10000;
+
+    bytes32 internal constant ORACLE_POSITION =
+        keccak256("lightnode.lightnode.oracle");
+
+    bytes32 internal constant DEPOSITED_VALIDATORS_POSITION =
+        keccak256("lightnode.lightnode.depositedValidators");
+
+    bytes32 internal constant BEACON_VALIDATORS_POSITION =
+        keccak256("lightnode.lightnode.beaconValidators");
+
+    bytes32 internal constant BEACON_BALANCE_POSITION =
+        keccak256("lightnode.lightnode.beaconBalance");
+
+    bytes32 internal constant EL_REWARDS_VAULT_POSITION =
+        keccak256("lightnode.lightnode.executionLayerRewardsVault");
+
+    bytes32 internal constant EL_REWARDS_WITHDRAWAL_LIMIT_POSITION =
+        keccak256("lido.Lido.ELRewardsWithdrawalLimit");
+
+    bytes32 internal constant BUFFERED_ETHER_POSITION =
+        keccak256("lido.Lido.bufferedEther");
+
+    bytes32 internal constant FEE_POSITION = keccak256("lido.Lido.fee");
+
+    bytes32 internal constant TREASURY_FEE_POSITION =
+        keccak256("lido.Lido.treasuryFee");
+
+    bytes32 internal constant INSURANCE_FEE_POSITION =
+        keccak256("lido.Lido.insuranceFee");
+
+    bytes32 internal constant NODE_OPERATORS_FEE_POSITION =
+        keccak256("lido.Lido.nodeOperatorsFee");
+
+    bytes32 internal constant INSURANCE_FUND_POSITION =
+        keccak256("lido.Lido.insuranceFund");
+
+    bytes32 internal constant TREASURY_POSITION =
+        keccak256("lido.Lido.treasury");
+
+    bytes32 internal constant NODE_OPERATORS_REGISTRY_POSITION =
+        keccak256("lido.Lido.nodeOperatorsRegistry");
 
     //events
     event Stake(
@@ -115,6 +162,8 @@ contract Staking is IStaking {
         emit ClaimRewards(msg.sender, rewardPerUser);
     }
 
+    function pushBeacon(uint256 epoch, uint256 eth2Bal) external;
+
     /* calculateRewards will calculate the user reward based on eth satked by the user/ total staked eth. */
     function calculateRewards(address _user) internal returns (uint256) {
         uint256 stakedEthByuser = stakingBalance[ETHER][_user];
@@ -161,11 +210,254 @@ contract Staking is IStaking {
         devAddress = _newDevAddress;
     }
 
-    function balanceOf(address _user) public view override returns (uint256) {
+    /*function balanceOf(address _user) public view returns (uint256) {
         return stakingBalance[ETHER][_user];
-    }
+    }*/
 
     function stillStaking() public view override returns (bool) {
         return isStaking[msg.sender];
+    }
+
+    //     function getTotalShares() public virtual override returns (uint256) {
+    //         super.getTotalShares();
+    //     }
+
+    function getOracle() public view returns (address) {
+        return ORACLE_POSITION.getStorageAddress();
+    }
+
+    function getBufferedEther() external view returns (uint256) {
+        return _getBufferedEther();
+    }
+
+    function pushBeacon(uint256 _beaconValidators, uint256 _beaconBalance)
+        external
+    {
+        require(msg.sender == getOracle(), "APP_AUTH_FAILED");
+
+        uint256 depositedValidators = DEPOSITED_VALIDATORS_POSITION
+            .getStorageUint256();
+        require(
+            _beaconValidators <= depositedValidators,
+            "REPORTED_MORE_DEPOSITED"
+        );
+
+        uint256 beaconValidators = BEACON_VALIDATORS_POSITION
+            .getStorageUint256();
+
+        require(
+            _beaconValidators >= beaconValidators,
+            "REPORTED_LESS_VALIDATORS"
+        );
+        uint256 appearedValidators = _beaconValidators.sub(beaconValidators);
+
+        uint256 rewardBase = (appearedValidators.mul(DEPOSIT_SIZE)).add(
+            BEACON_BALANCE_POSITION.getStorageUint256()
+        );
+
+        BEACON_BALANCE_POSITION.setStorageUint256(_beaconBalance);
+        BEACON_VALIDATORS_POSITION.setStorageUint256(_beaconValidators);
+
+        uint256 executionLayerRewards;
+        address executionLayerRewardsVaultAddress = getELRewardsVault();
+
+        if (executionLayerRewardsVaultAddress != address(0)) {
+            executionLayerRewards = ILidoExecutionLayerRewardsVault(
+                executionLayerRewardsVaultAddress
+            ).withdrawRewards(
+                    (_getTotalPooledEther() *
+                        EL_REWARDS_WITHDRAWAL_LIMIT_POSITION
+                            .getStorageUint256()) / TOTAL_BASIS_POINTS
+                );
+
+            if (executionLayerRewards != 0) {
+                BUFFERED_ETHER_POSITION.setStorageUint256(
+                    _getBufferedEther().add(executionLayerRewards)
+                );
+            }
+        }
+
+        if (_beaconBalance > rewardBase) {
+            uint256 rewards = _beaconBalance.sub(rewardBase);
+            distributeFee(rewards.add(executionLayerRewards));
+        }
+    }
+
+    function getELRewardsVault() public view returns (address) {
+        return EL_REWARDS_VAULT_POSITION.getStorageAddress();
+    }
+
+    function _getBufferedEther() internal view returns (uint256) {
+        uint256 buffered = BUFFERED_ETHER_POSITION.getStorageUint256();
+        assert(address(this).balance >= buffered);
+
+        return buffered;
+    }
+
+    function distributeFee(uint256 _totalRewards) internal {
+        // We need to take a defined percentage of the reported reward as a fee, and we do
+        // this by minting new token shares and assigning them to the fee recipients (see
+        // StETH docs for the explanation of the shares mechanics). The staking rewards fee
+        // is defined in basis points (1 basis point is equal to 0.01%, 10000 (TOTAL_BASIS_POINTS) is 100%).
+        //
+        // Since we've increased totalPooledEther by _totalRewards (which is already
+        // performed by the time this function is called), the combined cost of all holders'
+        // shares has became _totalRewards StETH tokens more, effectively splitting the reward
+        // between each token holder proportionally to their token share.
+        //
+        // Now we want to mint new shares to the fee recipient, so that the total cost of the
+        // newly-minted shares exactly corresponds to the fee taken:
+        //
+        // shares2mint * newShareCost = (_totalRewards * feeBasis) / TOTAL_BASIS_POINTS
+        // newShareCost = newTotalPooledEther / (prevTotalShares + shares2mint)
+        //
+        // which follows to:
+        //
+        //                        _totalRewards * feeBasis * prevTotalShares
+        // shares2mint = --------------------------------------------------------------
+        //                 (newTotalPooledEther * TOTAL_BASIS_POINTS) - (feeBasis * _totalRewards)
+        //
+        // The effect is that the given percentage of the reward goes to the fee recipient, and
+        // the rest of the reward is distributed between token holders proportionally to their
+        // token shares.
+        uint256 feeBasis = getFee();
+        uint256 shares2mint = (
+            _totalRewards.mul(feeBasis).mul(_getTotalShares()).div(
+                _getTotalPooledEther().mul(TOTAL_BASIS_POINTS).sub(
+                    feeBasis.mul(_totalRewards)
+                )
+            )
+        );
+
+        // Mint the calculated amount of shares to this contract address. This will reduce the
+        // balances of the holders, as if the fee was taken in parts from each of them.
+        _mintShares(address(this), shares2mint);
+
+        (
+            ,
+            uint16 insuranceFeeBasisPoints,
+            uint16 operatorsFeeBasisPoints
+        ) = getFeeDistribution();
+
+        uint256 toInsuranceFund = shares2mint.mul(insuranceFeeBasisPoints).div(
+            TOTAL_BASIS_POINTS
+        );
+        address insuranceFund = getInsuranceFund();
+        _transferShares(address(this), insuranceFund, toInsuranceFund);
+        _emitTransferAfterMintingShares(insuranceFund, toInsuranceFund);
+
+        uint256 distributedToOperatorsShares = _distributeNodeOperatorsReward(
+            shares2mint.mul(operatorsFeeBasisPoints).div(TOTAL_BASIS_POINTS)
+        );
+
+        // Transfer the rest of the fee to treasury
+        uint256 toTreasury = shares2mint.sub(toInsuranceFund).sub(
+            distributedToOperatorsShares
+        );
+
+        address treasury = getTreasury();
+        _transferShares(address(this), treasury, toTreasury);
+        _emitTransferAfterMintingShares(treasury, toTreasury);
+    }
+
+    function getFee() public view returns (uint16 feeBasisPoints) {
+        return uint16(FEE_POSITION.getStorageUint256());
+    }
+
+    function getFeeDistribution()
+        public
+        view
+        returns (
+            uint16 treasuryFeeBasisPoints,
+            uint16 insuranceFeeBasisPoints,
+            uint16 operatorsFeeBasisPoints
+        )
+    {
+        treasuryFeeBasisPoints = uint16(
+            TREASURY_FEE_POSITION.getStorageUint256()
+        );
+        insuranceFeeBasisPoints = uint16(
+            INSURANCE_FEE_POSITION.getStorageUint256()
+        );
+        operatorsFeeBasisPoints = uint16(
+            NODE_OPERATORS_FEE_POSITION.getStorageUint256()
+        );
+    }
+
+    function getInsuranceFund() public view returns (address) {
+        return INSURANCE_FUND_POSITION.getStorageAddress();
+    }
+
+    function _emitTransferAfterMintingShares(address _to, uint256 _sharesAmount)
+        internal
+    {
+        emit Transfer(address(0), _to, getPooledEthByShares(_sharesAmount));
+        emit TransferShares(address(0), _to, _sharesAmount);
+    }
+
+    function getOperators() public view returns (INodeOperatorsRegistry) {
+        return
+            INodeOperatorsRegistry(
+                NODE_OPERATORS_REGISTRY_POSITION.getStorageAddress()
+            );
+    }
+
+    function _distributeNodeOperatorsReward(uint256 _sharesToDistribute)
+        internal
+        returns (uint256 distributed)
+    {
+        (address[] memory recipients, uint256[] memory shares) = getOperators()
+            .getRewardsDistribution(_sharesToDistribute);
+
+        assert(recipients.length == shares.length);
+
+        distributed = 0;
+        for (uint256 idx = 0; idx < recipients.length; ++idx) {
+            _transferShares(address(this), recipients[idx], shares[idx]);
+            _emitTransferAfterMintingShares(recipients[idx], shares[idx]);
+            distributed = distributed.add(shares[idx]);
+        }
+    }
+
+    function getTreasury() public view returns (address) {
+        return TREASURY_POSITION.getStorageAddress();
+    }
+
+    function _submit(address _referral) internal returns (uint256) {
+        require(msg.value != 0, "ZERO_DEPOSIT");
+
+        StakeLimitState.Data memory stakeLimitData = STAKING_STATE_POSITION
+            .getStorageStakeLimitStruct();
+        require(!stakeLimitData.isStakingPaused(), "STAKING_PAUSED");
+
+        if (stakeLimitData.isStakingLimitSet()) {
+            uint256 currentStakeLimit = stakeLimitData
+                .calculateCurrentStakeLimit();
+
+            require(msg.value <= currentStakeLimit, "STAKE_LIMIT");
+
+            STAKING_STATE_POSITION.setStorageStakeLimitStruct(
+                stakeLimitData.updatePrevStakeLimit(
+                    currentStakeLimit - msg.value
+                )
+            );
+        }
+
+        uint256 sharesAmount = getSharesByPooledEth(msg.value);
+        if (sharesAmount == 0) {
+            // totalControlledEther is 0: either the first-ever deposit or complete slashing
+            // assume that shares correspond to Ether 1-to-1
+            sharesAmount = msg.value;
+        }
+
+        _mintShares(msg.sender, sharesAmount);
+
+        BUFFERED_ETHER_POSITION.setStorageUint256(
+            _getBufferedEther().add(msg.value)
+        );
+        emit Submitted(msg.sender, msg.value, _referral);
+
+        _emitTransferAfterMintingShares(msg.sender, sharesAmount);
+        return sharesAmount;
     }
 }
