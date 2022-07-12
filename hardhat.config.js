@@ -1,4 +1,16 @@
 require("@nomiclabs/hardhat-waffle");
+require("@nomiclabs/hardhat-etherscan");
+require("hardhat-gas-reporter");
+
+require("dotenv").config();
+
+const {
+  ETHERSCAN_API_KEY, 
+  PRIVATE_KEY,
+  MAINNET_URL,
+  GOERLI_URL,
+  REPORT_GAS
+} = process.env;
 
 // This is a sample Hardhat task. To learn how to create your own go to
 // https://hardhat.org/guides/create-task.html
@@ -25,5 +37,25 @@ module.exports = {
         runs: 200
       }
     },
-  }
+  },
+  networks: {
+    hardhat: {
+      forking: { // mainnet fork
+        enabled: true,
+        url: MAINNET_URL || "",
+      }
+    },
+    goerli: {
+      url: GOERLI_URL || "",
+      accounts:
+        PRIVATE_KEY !== undefined ? [PRIVATE_KEY] : [],
+    },
+  },
+  gasReporter: {
+    enabled: REPORT_GAS !== undefined,
+    currency: "USD",
+  },
+  etherscan: {
+    apiKey: ETHERSCAN_API_KEY,
+  },
 };
