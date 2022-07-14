@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-interface ILidoExecutionLayerRewardsVault {
+interface IExecutionLayerRewardsVault {
 
     /**
-    * @notice Withdraw all accumulated execution layer rewards to Lido contract
+    * @notice Withdraw all accumulated execution layer rewards to Staking contract
     * @param _maxAmount Max amount of ETH to withdraw
     * @return amount of funds received as execution layer rewards (in wei)
     */

@@ -5,7 +5,7 @@ import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "../interfaces/IStaking.sol";
 import "../token/SLETH.sol";
 import "../lib/UnStructuredData.sol";
-import "../interfaces/ILidoExecutionLayerRewardsVault.sol";
+import "../interfaces/IExecutionLayerRewardsVault.sol";
 import "../interfaces/INodeOperatorsRegistry.sol";
 
 contract Staking is IStaking, SLETH {
@@ -48,30 +48,33 @@ contract Staking is IStaking, SLETH {
         keccak256("lightnode.lightnode.executionLayerRewardsVault");
 
     bytes32 internal constant EL_REWARDS_WITHDRAWAL_LIMIT_POSITION =
-        keccak256("lido.Lido.ELRewardsWithdrawalLimit");
+        keccak256("lightnode.lightnode.ELRewardsWithdrawalLimit");
 
     bytes32 internal constant BUFFERED_ETHER_POSITION =
-        keccak256("lido.Lido.bufferedEther");
+        keccak256("lightnode.lightnode.bufferedEther");
 
-    bytes32 internal constant FEE_POSITION = keccak256("lido.Lido.fee");
+    bytes32 internal constant FEE_POSITION = keccak256("lightnode.lightnode.fee");
 
     bytes32 internal constant TREASURY_FEE_POSITION =
-        keccak256("lido.Lido.treasuryFee");
+        keccak256("lightnode.lightnode.treasuryFee");
 
     bytes32 internal constant INSURANCE_FEE_POSITION =
-        keccak256("lido.Lido.insuranceFee");
+        keccak256("lightnode.lightnode.insuranceFee");
 
     bytes32 internal constant NODE_OPERATORS_FEE_POSITION =
-        keccak256("lido.Lido.nodeOperatorsFee");
+        keccak256("lightnode.lightnode.nodeOperatorsFee");
 
     bytes32 internal constant INSURANCE_FUND_POSITION =
-        keccak256("lido.Lido.insuranceFund");
+        keccak256("lightnode.lightnode.insuranceFund");
 
     bytes32 internal constant TREASURY_POSITION =
-        keccak256("lido.Lido.treasury");
+        keccak256("lightnode.lightnode.treasury");
 
     bytes32 internal constant NODE_OPERATORS_REGISTRY_POSITION =
-        keccak256("lido.Lido.nodeOperatorsRegistry");
+        keccak256("lightnode.lightnode.nodeOperatorsRegistry");
+
+    /// @dev Just a counter of total amount of execution layer rewards received by Staking contract
+    bytes32 internal constant TOTAL_EL_REWARDS_COLLECTED_POSITION = keccak256("lightnode.lightnode.totalELRewardsCollected");
 
     //events
     event Stake(
@@ -92,6 +95,9 @@ contract Staking is IStaking, SLETH {
         uint256 balance
     );
     event ClaimRewards(address indexed user, uint256 amount);
+
+    /// @notice The amount of ETH withdrawn from ExecutionLayerRewardsVault contract to Staking contract
+    event ELRewardsReceived(uint256 amount);
 
     constructor(
         address _owner,
@@ -277,7 +283,7 @@ contract Staking is IStaking, SLETH {
         address executionLayerRewardsVaultAddress = getELRewardsVault();
 
         if (executionLayerRewardsVaultAddress != address(0)) {
-            executionLayerRewards = ILidoExecutionLayerRewardsVault(
+            executionLayerRewards = IExecutionLayerRewardsVault(
                 executionLayerRewardsVaultAddress
             ).withdrawRewards(
                     (_getTotalPooledEther() *
@@ -296,6 +302,20 @@ contract Staking is IStaking, SLETH {
             uint256 rewards = _beaconBalance - rewardBase;
             distributeFee(rewards + executionLayerRewards);
         }
+    }
+
+    /**
+    * @notice A payable function for execution layer rewards. Can be called only by ExecutionLayerRewardsVault contract
+    * @dev We need a dedicated function because funds received by the default payable function
+    * are treated as a user deposit
+    */
+    function receiveELRewards() external payable {
+        require(msg.sender == EL_REWARDS_VAULT_POSITION.getStorageAddress());
+
+        TOTAL_EL_REWARDS_COLLECTED_POSITION.setStorageUint256(
+            TOTAL_EL_REWARDS_COLLECTED_POSITION.getStorageUint256().add(msg.value));
+
+        emit ELRewardsReceived(msg.value);
     }
 
     function getELRewardsVault() public view returns (address) {

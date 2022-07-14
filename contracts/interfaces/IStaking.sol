@@ -17,4 +17,6 @@ interface IStaking {
     function pushBeacon(uint256 epoch, uint256 eth2Bal) external;
 
     function getTotalShares() external view returns (uint256);
+
+    function receiveELRewards() external payable;
 }
