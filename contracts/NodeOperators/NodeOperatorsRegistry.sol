@@ -61,7 +61,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AccessControl, ArrConv
     // @dev Cached number of active operators
     bytes32 internal constant ACTIVE_OPERATORS_COUNT_POSITION = keccak256("lightNode.NodeOperatorsRegistry.activeOperatorsCount");
 
-    /// @dev link to the Lido contract
+    /// @dev link to the Staking contract
     bytes32 internal constant LIGHT_NODE_POSITION = keccak256("lightNode.NodeOperatorsRegistry.lightNode");
 
     /// @dev link to the index of operations with keys
@@ -165,7 +165,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AccessControl, ArrConv
 
     /**
     * @notice Remove unused signing keys
-    * @dev Function is used by the Lido contract
+    * @dev Function is used by the Staking contract
     */
     function trimUnusedKeys() external onlyLightNode override {
         uint256 length = getNodeOperatorsCount();
@@ -274,7 +274,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AccessControl, ArrConv
     /**
      * @notice Selects and returns at most `_numKeys` signing keys (as well as the corresponding
      *         signatures) from the set of active keys and marks the selected keys as used.
-     *         May only be called by the Lido contract.
+     *         May only be called by the Staking contract.
      *
      * @param _numKeys The number of keys to select. The actual number of selected keys may be less
      *        due to the lack of active keys.

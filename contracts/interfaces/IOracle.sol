@@ -44,7 +44,7 @@ interface IOracle {
     event ContractVersionSet(uint256 version);
 
     /**
-     * @notice Return the Lido contract address
+     * @notice Return the Staking contract address
      */
     function getLightNode() external view returns (IStaking);
 
@@ -81,12 +81,12 @@ interface IOracle {
     function setAllowedBeaconBalanceRelativeDecrease(uint256 _value) external;
 
     /**
-     * @notice Return the receiver contract address to be called when the report is pushed to Lido
+     * @notice Return the receiver contract address to be called when the report is pushed to LightNode
      */
     function getBeaconReportReceiver() external view returns (address);
 
     /**
-     * @notice Set the receiver contract address to be called when the report is pushed to Lido
+     * @notice Set the receiver contract address to be called when the report is pushed to LightNode
      */
     function setBeaconReportReceiver(address _addr) external;
 
