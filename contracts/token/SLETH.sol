@@ -1,11 +1,37 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 import "../lib/UnstructuredStorage.sol";
-import "../interfaces/ISlETH.sol";
 
-abstract contract SlETH is ISlETH, Pausable {
+/**
+ * @title Interest-bearing ERC20-like token for Lightnode Liquid Staking protocol.
+ *
+ * This contract is abstract. To make the contract deployable override the
+ * `_getTotalPooledEther` function. `Lightnode.sol` contract inherits SlETH and defines
+ * the `_getTotalPooledEther` function.
+ *
+ * SlETH balances are dynamic and represent the holder's share in the total amount
+ * of Ether controlled by the protocol. Account shares aren't normalized, so the
+ * contract also stores the sum of all shares to calculate each account's token balance
+ * which equals to:
+ *
+ *   shares[account] * _getTotalPooledEther() / _getTotalShares()
+ *
+ * Since balances of all token holders change when the amount of total pooled Ether
+ * changes, this token cannot fully implement ERC20 standard: it only emits `Transfer`
+ * events upon explicit transfer between holders. In contrast, when total amount of
+ * pooled Ether increases, no `Transfer` events are generated: doing so would require
+ * emitting an event for each token holder and thus running an unbounded loop.
+ *
+ * The token inherits from `Pausable` and uses `whenNotPaused` modifier for methods
+ * which change `shares` or `allowances`. `_pause` and `_unpause` functions are overridden
+ * in `LightNode.sol` and might be called by an account with the `PAUSE_ROLE` assigned by the
+ * DAO. This is useful for emergency scenarios, e.g. a protocol bug, where one might want
+ * to freeze all token transfers and approvals until the emergency is resolved.
+ */
+abstract contract SlETH is IERC20, Pausable {
     using UnstructuredStorage for bytes32;
 
     /**
@@ -37,6 +63,25 @@ abstract contract SlETH is ISlETH, Pausable {
         address indexed from,
         address indexed to,
         uint256 sharesValue
+    );
+
+    /**
+     * @notice An executed `burnShares` request
+     *
+     * @dev Reports simultaneously burnt shares amount
+     * and corresponding slETH amount.
+     * The slETH amount is calculated twice: before and after the burning incurred rebase.
+     *
+     * @param account holder of the burnt shares
+     * @param preRebaseTokenAmount amount of slETH the burnt shares corresponded to before the burn
+     * @param postRebaseTokenAmount amount of slETH the burnt shares corresponded to after the burn
+     * @param sharesAmount amount of burnt shares
+     */
+    event SharesBurnt(
+        address indexed account,
+        uint256 preRebaseTokenAmount,
+        uint256 postRebaseTokenAmount,
+        uint256 sharesAmount
     );
 
     string private _name = "Lightnode staked Ether";
@@ -242,12 +287,7 @@ abstract contract SlETH is ISlETH, Pausable {
     /**
      * @return the amount of shares that corresponds to `_ethAmount` protocol-controlled Ether.
      */
-    function getSharesByPooledEth(uint256 _ethAmount)
-        public
-        view
-        override
-        returns (uint256)
-    {
+    function getSharesByPooledEth(uint256 _ethAmount) public view returns (uint256) {
         uint256 totalPooledEther = _getTotalPooledEther();
         if (totalPooledEther == 0) {
             return 0;
@@ -259,12 +299,7 @@ abstract contract SlETH is ISlETH, Pausable {
     /**
      * @return the amount of Ether that corresponds to `_sharesAmount` token shares.
      */
-    function getPooledEthByShares(uint256 _sharesAmount)
-        public
-        view
-        override
-        returns (uint256)
-    {
+    function getPooledEthByShares(uint256 _sharesAmount) public view returns (uint256) {
         uint256 totalShares = _getTotalShares();
         if (totalShares == 0) {
             return 0;
@@ -282,7 +317,7 @@ abstract contract SlETH is ISlETH, Pausable {
         address _sender,
         address _recipient,
         uint256 _amount
-    ) internal virtual whenNotPaused {
+    ) internal {
         uint256 _sharesToTransfer = getSharesByPooledEth(_amount);
         _transferShares(_sender, _recipient, _sharesToTransfer);
         emit Transfer(_sender, _recipient, _amount);
@@ -314,12 +349,12 @@ abstract contract SlETH is ISlETH, Pausable {
      * - the contract must not be paused.
      */
     function _transferShares(
-        address _sender,
-        address _recipient,
+        address _sender, 
+        address _recipient, 
         uint256 _sharesAmount
     ) internal whenNotPaused {
-        require(_sender != address(0), "TRANSFER_FROM_THE_ZERO_ADDRESS");
-        require(_recipient != address(0), "TRANSFER_TO_THE_ZERO_ADDRESS");
+        require(_sender != address(0), "Transfer from the zero address");
+        require(_recipient != address(0), "Transfer to the zero address");
 
         uint256 currentSenderShares = shares[_sender];
         require(currentSenderShares >= _sharesAmount, "transfer amount exceeds balance");
@@ -330,54 +365,76 @@ abstract contract SlETH is ISlETH, Pausable {
         }
     }
 
-    //mint function, mints new shares. it does not change the totalsupply
-
-    /* function _mint(address account, uint256 amount)
-        public
-        virtual
+    /**
+     * @notice Creates `_sharesAmount` shares and assigns them to `_recipient`, increasing the total amount of shares.
+     * @dev This doesn't increase the token total supply.
+     *
+     * Requirements:
+     *
+     * - `_recipient` cannot be the zero address.
+     * - the contract must not be paused.
+     */
+    function _mintShares(address _recipient, uint256 _sharesAmount)
+        internal
         whenNotPaused
         returns (uint256 newTotalShares)
     {
-        require(account != address(0), "ERC20: mint to the zero address");
+        require(_recipient != address(0), "Mint to the zero address");
 
-        _beforeTokenTransfer(address(0), account, amount);
-
-        newTotalShares = _getTotalShares() + amount;
+        newTotalShares = _getTotalShares() + _sharesAmount;
         TOTAL_SHARES_POSITION.setStorageUint256(newTotalShares);
 
-        _balances[account] += amount;
+        shares[_recipient] += _sharesAmount;
 
-        emit Transfer(address(0), account, amount);
-
-        _afterTokenTransfer(address(0), account, amount);
+        // Notice: we're not emitting a Transfer event from the zero address here since shares mint
+        // works by taking the amount of tokens corresponding to the minted shares from all other
+        // token holders, proportionally to their share. The total supply of the token doesn't change
+        // as the result. This is equivalent to performing a send from each other token holder's
+        // address to `address`, but we cannot reflect this as it would require sending an unbounded
+        // number of events.
     }
 
-    //burn function, burn shares. it does not change the totalsupply.
-
-    function _burn(address account, uint256 amount)
-        public
-        virtual
+    /**
+     * @notice Destroys `_sharesAmount` shares from `_account`'s holdings, decreasing the total amount of shares.
+     * @dev This doesn't decrease the token total supply.
+     *
+     * Requirements:
+     *
+     * - `_account` cannot be the zero address.
+     * - `_account` must hold at least `_sharesAmount` shares.
+     * - the contract must not be paused.
+     */
+    function _burnShares(address _account, uint256 _sharesAmount)
+        internal
         whenNotPaused
         returns (uint256 newTotalShares)
     {
-        require(account != address(0), "ERC20: burn from the zero address");
+        require(_account != address(0), "Burn from the zero address");
 
-        _beforeTokenTransfer(account, address(0), amount);
+        uint256 accountShares = shares[_account];
+        require(accountShares >= _sharesAmount, "Burn amount exceeds balance");
 
-        uint256 accountBalance = _balances[account];
-        require(accountBalance >= amount, "ERC20: burn amount exceeds balance");
+        uint256 preRebaseTokenAmount = getPooledEthByShares(_sharesAmount);
 
-        newTotalShares = _getTotalShares() - (amount);
+        newTotalShares = _getTotalShares() - _sharesAmount;
         TOTAL_SHARES_POSITION.setStorageUint256(newTotalShares);
 
         unchecked {
-            _balances[account] -= amount;
+            shares[_account] = accountShares - _sharesAmount;
         }
 
-        emit Transfer(account, address(0), amount);
+        uint256 postRebaseTokenAmount = getPooledEthByShares(_sharesAmount);
 
-        _afterTokenTransfer(account, address(0), amount);
-    } */
+        emit SharesBurnt(_account, preRebaseTokenAmount, postRebaseTokenAmount, _sharesAmount);
+
+        // Notice: we're not emitting a Transfer event to the zero address here since shares burn
+        // works by redistributing the amount of tokens corresponding to the burned shares between
+        // all other token holders. The total supply of the token doesn't change as the result.
+        // This is equivalent to performing a send from `address` to each other token holder address,
+        // but we cannot reflect this as it would require sending an unbounded number of events.
+
+        // We're emitting `SharesBurnt` event to provide an explicit rebase log record nonetheless.
+    }
 
     /**
      * @notice Sets `_amount` as the allowance of `_spender` over the `_owner` s tokens.
@@ -390,13 +447,9 @@ abstract contract SlETH is ISlETH, Pausable {
      * - `_spender` cannot be the zero address.
      * - the contract must not be paused.
      */
-    function _approve(
-        address _owner,
-        address _spender,
-        uint256 _amount
-    ) internal virtual whenNotPaused {
-        require(_owner != address(0), "APPROVE_FROM_ZERO_ADDRESS");
-        require(_spender != address(0), "APPROVE_TO_ZERO_ADDRESS");
+    function _approve(address _owner, address _spender, uint256 _amount) internal whenNotPaused {
+        require(_owner != address(0), "Approve from zero address");
+        require(_spender != address(0), "Approve to zero address");
 
         allowances[_owner][_spender] = _amount;
         emit Approval(_owner, _spender, _amount);
