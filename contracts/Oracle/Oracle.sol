@@ -5,12 +5,12 @@ import "../lib/ReportUtils.sol";
 import "../interfaces/IOracle.sol";
 import "../interfaces/IStaking.sol";
 import "../interfaces/IBeaconReportReceiver.sol";
-import "../lib/UnStructuredData.sol";
+import "../lib/UnstructuredStorage.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 
 contract Oracle is IOracle, AccessControl {
     using ReportUtils for uint256;
-    using UnStructuredData for bytes32;
+    using UnstructuredStorage for bytes32;
 
     struct BeaconSpec {
         uint64 epochsPerFrame;

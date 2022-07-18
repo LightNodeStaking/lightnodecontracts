@@ -3,14 +3,14 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "../interfaces/IStaking.sol";
-import "../token/SLETH.sol";
-import "../lib/UnStructuredData.sol";
+import "../token/SlETH.sol";
+import "../lib/UnstructuredStorage.sol";
 import "../interfaces/IExecutionLayerRewardsVault.sol";
 import "../interfaces/INodeOperatorsRegistry.sol";
 
-contract Staking is IStaking, SLETH {
+contract Staking is IStaking, SlETH {
     using SafeMath for uint256;
-    using UnStructuredData for bytes32;
+    using UnstructuredStorage for bytes32;
 
     address public owner;
     address public devAddress;
@@ -19,7 +19,7 @@ contract Staking is IStaking, SLETH {
     uint256 public totalReward;
     address public constant ETHER = address(0);
     uint256 public constant DEPOSIT_SIZE = 32 ether;
-    SLETH public slETH;
+    SlETH public slETH;
 
     //storing stakers addresses
     address[] public stakers;
@@ -102,7 +102,7 @@ contract Staking is IStaking, SLETH {
     constructor(
         address _owner,
         address _devAddress,
-        SLETH _slETH
+        SlETH _slETH
     ) {
         owner = _owner;
         devAddress = _devAddress;
@@ -144,8 +144,8 @@ contract Staking is IStaking, SLETH {
         emit TransferSleth(msg.sender, msg.value, block.timestamp);
     }
 
-    function totalSupply() public view override(IStaking, SLETH) returns (uint256) {
-        return SLETH.totalSupply();
+    function totalSupply() public view override(IStaking, SlETH) returns (uint256) {
+        return SlETH.totalSupply();
     }
 
     /*This is for users only. Users can call this function to withdraw their staked eth.
@@ -231,8 +231,8 @@ contract Staking is IStaking, SLETH {
         return isStaking[msg.sender];
     }
 
-    function getTotalShares() public view override(IStaking, SLETH) returns (uint256) {
-       return SLETH.getTotalShares();
+    function getTotalShares() public view override(IStaking, SlETH) returns (uint256) {
+       return SlETH.getTotalShares();
     }
 
     function getOracle() public view returns (address) {
