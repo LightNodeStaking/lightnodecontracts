@@ -196,7 +196,7 @@ interface ILightNode {
     /**
       * @notice Returns current credentials to withdraw ETH on ETH 2.0 side after the phase 2 is launched
       */
-    function getWithdrawalCredentials() external view returns (bytes memory);
+    function getWithdrawalCredentials() external view returns (bytes32);
 
     event WithdrawalCredentialsSet(bytes32 withdrawalCredentials);
 
