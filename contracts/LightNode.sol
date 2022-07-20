@@ -7,6 +7,8 @@ import "solidity-bytes-utils/contracts/BytesLib.sol";
 import "./interfaces/ILightNode.sol";
 import "./interfaces/IDepositContract.sol";
 import "./interfaces/INodeOperatorsRegistry.sol";
+import "./interfaces/IExecutionLayerRewardsVault.sol";
+
 import "./token/SlETH.sol";
 import "./lib/UnstructuredStorage.sol";
 
@@ -218,10 +220,110 @@ contract LightNode is ILightNode, SlETH, AccessControl {
     }
 
     /**
+    * @notice Set credentials to withdraw ETH on ETH 2.0 side after the phase 2 is launched to `_withdrawalCredentials`
+    * @dev Note that setWithdrawalCredentials discards all unused signing keys as the signatures are invalidated.
+    * @param _withdrawalCredentials withdrawal credentials field as defined in the Ethereum PoS consensus specs
+    */
+    function setWithdrawalCredentials(bytes32 _withdrawalCredentials) external onlyRole(MANAGE_WITHDRAWAL_KEY) {
+        WITHDRAWAL_CREDENTIALS_POSITION.setStorageBytes32(_withdrawalCredentials);
+        getOperators().trimUnusedKeys();
+
+        emit WithdrawalCredentialsSet(_withdrawalCredentials);
+    }
+
+    /**
+    * @dev Sets the address of ExecutionLayerRewardsVault contract
+    * @param _executionLayerRewardsVault Execution layer rewards vault contract address
+    */
+    function setELRewardsVault(address _executionLayerRewardsVault) external onlyRole(SET_EL_REWARDS_VAULT_ROLE) {
+        EL_REWARDS_VAULT_POSITION.setStorageAddress(_executionLayerRewardsVault);
+
+        emit ELRewardsVaultSet(_executionLayerRewardsVault);
+    }
+
+    /**
+    * @dev Sets limit on amount of ETH to withdraw from execution layer rewards vault per Oracle report
+    * @param _limitPoints limit in basis points to amount of ETH to withdraw per Oracle report
+    */
+    function setELRewardsWithdrawalLimit(uint16 _limitPoints) external onlyRole(SET_EL_REWARDS_WITHDRAWAL_LIMIT_ROLE) {
+        _setBPValue(EL_REWARDS_WITHDRAWAL_LIMIT_POSITION, _limitPoints);
+        emit ELRewardsWithdrawalLimitSet(_limitPoints);
+    }
+
+    /**
+    * @notice Updates beacon stats, collects rewards from ExecutionLayerRewardsVault and distributes all rewards if beacon balance increased
+    * @dev periodically called by the Oracle contract
+    * @param _beaconValidators number of LightNode's keys in the beacon state
+    * @param _beaconBalance summarized balance of LightNode-controlled keys in wei
+    */
+    function handleOracleReport(uint256 _beaconValidators, uint256 _beaconBalance) external whenNotPaused {
+        require(msg.sender == getOracle(), "APP_AUTH_FAILED");
+
+        uint256 depositedValidators = DEPOSITED_VALIDATORS_POSITION.getStorageUint256();
+        require(_beaconValidators <= depositedValidators, "REPORTED_MORE_DEPOSITED");
+
+        uint256 beaconValidators = BEACON_VALIDATORS_POSITION.getStorageUint256();
+        // Since the calculation of funds in the ingress queue is based on the number of validators
+        // that are in a transient state (deposited but not seen on beacon yet), we can't decrease the previously
+        // reported number (we'll be unable to figure out who is in the queue and count them).
+        require(_beaconValidators >= beaconValidators, "REPORTED_LESS_VALIDATORS");
+        uint256 appearedValidators = _beaconValidators - beaconValidators;
+
+        // RewardBase is the amount of money that is not included in the reward calculation
+        // Just appeared validators * 32 added to the previously reported beacon balance
+        uint256 rewardBase = (appearedValidators * DEPOSIT_SIZE) + (BEACON_BALANCE_POSITION.getStorageUint256());
+
+        // Save the current beacon balance and validators to
+        // calculate rewards on the next push
+        BEACON_BALANCE_POSITION.setStorageUint256(_beaconBalance);
+        BEACON_VALIDATORS_POSITION.setStorageUint256(_beaconValidators);
+
+        // If ExecutionLayerRewardsVault address is not set just do as if there were no execution layer rewards at all
+        // Otherwise withdraw all rewards and put them to the buffer
+        // Thus, execution layer rewards are handled the same way as beacon rewards
+
+        uint256 executionLayerRewards;
+        address executionLayerRewardsVaultAddress = getELRewardsVault();
+
+        if (executionLayerRewardsVaultAddress != address(0)) {
+            executionLayerRewards = IExecutionLayerRewardsVault(executionLayerRewardsVaultAddress).withdrawRewards(
+                (_getTotalPooledEther() * EL_REWARDS_WITHDRAWAL_LIMIT_POSITION.getStorageUint256()) / TOTAL_BASIS_POINTS
+            );
+
+            if (executionLayerRewards != 0) {
+                BUFFERED_ETHER_POSITION.setStorageUint256(_getBufferedEther() + executionLayerRewards);
+            }
+        }
+
+        // Don’t mint/distribute any protocol fee on the non-profitable Lido oracle report
+        // (when beacon chain balance delta is zero or negative).
+        // See ADR #3 for details: https://research.lido.fi/t/rewards-distribution-after-the-merge-architecture-decision-record/1535
+        if (_beaconBalance > rewardBase) {
+            uint256 rewards = _beaconBalance - rewardBase;
+            distributeFee(rewards + executionLayerRewards);
+        }
+    }
+
+    /**
     * @notice Gets node operators registry interface handle
     */
     function getOperators() public view returns (INodeOperatorsRegistry) {
         return INodeOperatorsRegistry(NODE_OPERATORS_REGISTRY_POSITION.getStorageAddress());
+    }
+
+    /**
+    * @notice Gets authorized oracle address
+    * @return address of oracle contract
+    */
+    function getOracle() public view returns (address) {
+        return ORACLE_POSITION.getStorageAddress();
+    }
+
+    /**
+    * @notice Returns address of the contract set as LidoExecutionLayerRewardsVault
+    */
+    function getELRewardsVault() public view returns (address) {
+        return EL_REWARDS_VAULT_POSITION.getStorageAddress();
     }
 
     /**
@@ -315,6 +417,106 @@ contract LightNode is ILightNode, SlETH, AccessControl {
     }
 
     /**
+    * @dev Distributes fee portion of the rewards by minting and distributing corresponding amount of liquid tokens.
+    * @param _totalRewards Total rewards accrued on the Ethereum 2.0 side in wei
+    */
+    function distributeFee(uint256 _totalRewards) internal {
+        // We need to take a defined percentage of the reported reward as a fee, and we do
+        // this by minting new token shares and assigning them to the fee recipients (see
+        // StETH docs for the explanation of the shares mechanics). The staking rewards fee
+        // is defined in basis points (1 basis point is equal to 0.01%, 10000 (TOTAL_BASIS_POINTS) is 100%).
+        //
+        // Since we've increased totalPooledEther by _totalRewards (which is already
+        // performed by the time this function is called), the combined cost of all holders'
+        // shares has became _totalRewards StETH tokens more, effectively splitting the reward
+        // between each token holder proportionally to their token share.
+        //
+        // Now we want to mint new shares to the fee recipient, so that the total cost of the
+        // newly-minted shares exactly corresponds to the fee taken:
+        //
+        // shares2mint * newShareCost = (_totalRewards * feeBasis) / TOTAL_BASIS_POINTS
+        // newShareCost = newTotalPooledEther / (prevTotalShares + shares2mint)
+        //
+        // which follows to:
+        //
+        //                        _totalRewards * feeBasis * prevTotalShares
+        // shares2mint = --------------------------------------------------------------
+        //                 (newTotalPooledEther * TOTAL_BASIS_POINTS) - (feeBasis * _totalRewards)
+        //
+        // The effect is that the given percentage of the reward goes to the fee recipient, and
+        // the rest of the reward is distributed between token holders proportionally to their
+        // token shares.
+        uint256 feeBasis = getFee();
+        uint256 shares2mint = (
+            _totalRewards * feeBasis * _getTotalShares()
+            / (
+                _getTotalPooledEther() * TOTAL_BASIS_POINTS
+                - (feeBasis * _totalRewards)
+            )
+        );
+
+        // Mint the calculated amount of shares to this contract address. This will reduce the
+        // balances of the holders, as if the fee was taken in parts from each of them.
+        _mintShares(address(this), shares2mint);
+
+        (,uint16 insuranceFeeBasisPoints, uint16 operatorsFeeBasisPoints) = getFeeDistribution();
+
+        uint256 toInsuranceFund = shares2mint * insuranceFeeBasisPoints / TOTAL_BASIS_POINTS;
+        address insuranceFund = getInsuranceFund();
+        _transferShares(address(this), insuranceFund, toInsuranceFund);
+        _emitTransferAfterMintingShares(insuranceFund, toInsuranceFund);
+
+        uint256 distributedToOperatorsShares = _distributeNodeOperatorsReward(
+            shares2mint * operatorsFeeBasisPoints / TOTAL_BASIS_POINTS
+        );
+
+        // Transfer the rest of the fee to treasury
+        uint256 toTreasury = shares2mint - toInsuranceFund - distributedToOperatorsShares;
+
+        address treasury = getTreasury();
+        _transferShares(address(this), treasury, toTreasury);
+        _emitTransferAfterMintingShares(treasury, toTreasury);
+    }
+
+    /**
+    * @notice Returns the treasury address
+    */
+    function getTreasury() public view returns (address) {
+        return TREASURY_POSITION.getStorageAddress();
+    }
+
+    /**
+    * @notice Returns staking rewards fee rate
+    */
+    function getFee() public view returns (uint16 feeBasisPoints) {
+        return uint16(FEE_POSITION.getStorageUint256());
+    }
+
+    /**
+    * @notice Returns fee distribution proportion
+    */
+    function getFeeDistribution()
+        public
+        view
+        returns (
+            uint16 treasuryFeeBasisPoints,
+            uint16 insuranceFeeBasisPoints,
+            uint16 operatorsFeeBasisPoints
+        )
+    {
+        treasuryFeeBasisPoints = uint16(TREASURY_FEE_POSITION.getStorageUint256());
+        insuranceFeeBasisPoints = uint16(INSURANCE_FEE_POSITION.getStorageUint256());
+        operatorsFeeBasisPoints = uint16(NODE_OPERATORS_FEE_POSITION.getStorageUint256());
+    }
+
+    /**
+    * @notice Returns the insurance fund address
+    */
+    function getInsuranceFund() public view returns (address) {
+        return INSURANCE_FUND_POSITION.getStorageAddress();
+    }
+
+    /**
     * @notice Returns current credentials to withdraw ETH on ETH 2.0 side after the phase 2 is launched
     */
     function getWithdrawalCredentials() public view returns (bytes32) {
@@ -326,6 +528,28 @@ contract LightNode is ILightNode, SlETH, AccessControl {
     */
     function getDepositContract() public view returns (IDepositContract) {
         return IDepositContract(DEPOSIT_CONTRACT_POSITION.getStorageAddress());
+    }
+
+    /**
+    *  @dev Internal function to distribute reward to node operators
+    *  @param _sharesToDistribute amount of shares to distribute
+    *  @return distributed Actual amount of shares that was transferred to node operators as a reward
+    */
+    function _distributeNodeOperatorsReward(uint256 _sharesToDistribute) internal returns (uint256 distributed) {
+        (address[] memory recipients, uint256[] memory shares) = getOperators().getRewardsDistribution(_sharesToDistribute);
+
+        assert(recipients.length == shares.length);
+
+        distributed = 0;
+        for (uint256 idx = 0; idx < recipients.length; ++idx) {
+            _transferShares(
+                address(this),
+                recipients[idx],
+                shares[idx]
+            );
+            _emitTransferAfterMintingShares(recipients[idx], shares[idx]);
+            distributed = distributed + shares[idx];
+        }
     }
 
     /**
