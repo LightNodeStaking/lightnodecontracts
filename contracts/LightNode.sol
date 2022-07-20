@@ -161,10 +161,75 @@ contract LightNode is ILightNode, SlETH, AccessControl {
     }
 
     /**
+    * @notice Pause pool routine operations
+    */
+    function pause() external onlyRole(PAUSE_ROLE) {
+        _pause();
+        // _pauseStaking();
+    }
+
+    /**
+    * @notice Resume pool routine operations
+    * @dev Staking should be resumed manually after this call using the desired limits
+    */
+    function resume() external onlyRole(RESUME_ROLE) {
+        _unpause();
+        // _resumeStaking();
+    }
+
+    /**
+    * @notice Set fee rate to `_feeBasisPoints` basis points.
+    * The fees are accrued when:
+    * - oracles report staking results (beacon chain balance increase)
+    * - validators gain execution layer rewards (priority fees and MEV)
+    * @param _feeBasisPoints Fee rate, in basis points
+    */
+    function setFee(uint16 _feeBasisPoints) external onlyRole(MANAGE_FEE) {
+        _setBPValue(FEE_POSITION, _feeBasisPoints);
+        emit FeeSet(_feeBasisPoints);
+    }
+
+    /**
+    * @notice Set fee distribution
+    * @param _treasuryFeeBasisPoints basis points go to the treasury,
+    * @param _insuranceFeeBasisPoints basis points go to the insurance fund,
+    * @param _operatorsFeeBasisPoints basis points go to node operators.
+    * @dev The sum has to be 10 000.
+    */
+    function setFeeDistribution(
+        uint16 _treasuryFeeBasisPoints,
+        uint16 _insuranceFeeBasisPoints,
+        uint16 _operatorsFeeBasisPoints
+    )
+        external onlyRole(MANAGE_FEE)
+    {
+        require(
+            TOTAL_BASIS_POINTS == uint256(_treasuryFeeBasisPoints)
+            + uint256(_insuranceFeeBasisPoints)
+            + uint256(_operatorsFeeBasisPoints),
+            "FEES_DONT_ADD_UP"
+        );
+
+        _setBPValue(TREASURY_FEE_POSITION, _treasuryFeeBasisPoints);
+        _setBPValue(INSURANCE_FEE_POSITION, _insuranceFeeBasisPoints);
+        _setBPValue(NODE_OPERATORS_FEE_POSITION, _operatorsFeeBasisPoints);
+
+        emit FeeDistributionSet(_treasuryFeeBasisPoints, _insuranceFeeBasisPoints, _operatorsFeeBasisPoints);
+    }
+
+    /**
     * @notice Gets node operators registry interface handle
     */
     function getOperators() public view returns (INodeOperatorsRegistry) {
         return INodeOperatorsRegistry(NODE_OPERATORS_REGISTRY_POSITION.getStorageAddress());
+    }
+
+    /**
+    * @dev Write a value nominated in basis points
+    */
+    function _setBPValue(bytes32 _slot, uint16 _value) internal {
+        require(_value <= TOTAL_BASIS_POINTS, "VALUE_OVER_100_PERCENT");
+        _slot.setStorageUint256(uint256(_value));
     }
 
     /**
