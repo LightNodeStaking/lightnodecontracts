@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-library MemoryUtils{
-
-    function unSafeBytesAllocation (uint256 _length) internal pure returns(bytes memory memoryBytes){
+library MemoryUtils {
+    /**
+     * @dev Allocates a memory byte array of `_len` bytes without zeroing it out.
+     */
+    function unSafeBytesAllocation(uint256 _length) internal pure returns(bytes memory memoryBytes) {
         assembly{
             memoryBytes := mload(0x40)
             mstore(memoryBytes, _length)
@@ -11,6 +13,9 @@ library MemoryUtils{
         }
     }
 
+    /**
+     * @dev Performs a memory copy of `_len` bytes from position `_src` to position `_dst`.
+     */
     function memorycopy(uint256 _start, uint256 _end, uint256 _length) internal pure{
         assembly{
             //while loop _length > _length
@@ -30,7 +35,9 @@ library MemoryUtils{
         }
     }
 
-    //mainly be using for NodeRegistry
+    /**
+     * @dev Copies bytes from `_src` to `_dst`, starting at position `_dstStart` into `_dst`.
+     */
     function copyBytes(bytes memory _start, bytes memory _end, uint256 _endStart) internal pure {
         require(_endStart + _start.length <= _end.length, "ARRAY_OUT_OF_BOUNDS");
         uint256 intStartPos;
