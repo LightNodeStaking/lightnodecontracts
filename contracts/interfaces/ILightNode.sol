@@ -105,13 +105,13 @@ interface ILightNode {
         uint256 prevStakeBlockNumber
     );
 
-    event Stopped();
+    /* event Stopped();
     event Resumed();
 
     event StakingPaused();
     event StakingResumed();
     event StakingLimitSet(uint256 maxStakeLimit, uint256 stakeLimitIncreasePerBlock);
-    event StakingLimitRemoved();
+    event StakingLimitRemoved(); */
 
     /**
       * @notice Set LightNode protocol contracts (oracle, treasury, insurance fund).
@@ -125,7 +125,7 @@ interface ILightNode {
         address _insuranceFund
     ) external;
 
-    event ProtocolContactsSet(address oracle, address treasury, address insuranceFund);
+    // event ProtocolContactsSet(address oracle, address treasury, address insuranceFund);
 
     /**
       * @notice Set fee rate to `_feeBasisPoints` basis points.
@@ -163,9 +163,9 @@ interface ILightNode {
         uint16 operatorsFeeBasisPoints
     );
 
-    event FeeSet(uint16 feeBasisPoints);
+    // event FeeSet(uint16 feeBasisPoints);
 
-    event FeeDistributionSet(uint16 treasuryFeeBasisPoints, uint16 insuranceFeeBasisPoints, uint16 operatorsFeeBasisPoints);
+    // event FeeDistributionSet(uint16 treasuryFeeBasisPoints, uint16 insuranceFeeBasisPoints, uint16 operatorsFeeBasisPoints);
 
     /**
       * @notice A payable function supposed to be called only by ExecutionLayerRewardsVault contract
@@ -175,7 +175,7 @@ interface ILightNode {
     function receiveELRewards() external payable;
 
     // The amount of ETH withdrawn from ExecutionLayerRewardsVault contract to LightNode contract
-    event ELRewardsReceived(uint256 amount);
+    // event ELRewardsReceived(uint256 amount);
 
     /**
       * @dev Sets limit on amount of ETH to withdraw from execution layer rewards vault per Oracle report
@@ -184,7 +184,7 @@ interface ILightNode {
     function setELRewardsWithdrawalLimit(uint16 _limitPoints) external;
 
     // Percent in basis points of total pooled ether allowed to withdraw from ExecutionLayerRewardsVault per Oracle report
-    event ELRewardsWithdrawalLimitSet(uint256 limitPoints);
+    // event ELRewardsWithdrawalLimitSet(uint256 limitPoints);
 
     /**
       * @notice Set credentials to withdraw ETH on ETH 2.0 side after the phase 2 is launched to `_withdrawalCredentials`
@@ -198,7 +198,7 @@ interface ILightNode {
       */
     function getWithdrawalCredentials() external view returns (bytes32);
 
-    event WithdrawalCredentialsSet(bytes32 withdrawalCredentials);
+    // event WithdrawalCredentialsSet(bytes32 withdrawalCredentials);
 
     /**
       * @dev Sets the address of ExecutionLayerRewardsVault contract
@@ -207,7 +207,7 @@ interface ILightNode {
     function setELRewardsVault(address _executionLayerRewardsVault) external;
 
     // The `executionLayerRewardsVault` was set as the execution layer rewards vault for LightNode
-    event ELRewardsVaultSet(address executionLayerRewardsVault);
+    // event ELRewardsVaultSet(address executionLayerRewardsVault);
 
     /**
       * @notice Ether on the ETH 2.0 side reported by the oracle
@@ -226,15 +226,15 @@ interface ILightNode {
     function submit(address _referral) external payable returns (uint256 StETH);
 
     // Records a deposit made by a user
-    event Submitted(address indexed sender, uint256 amount, address referral);
+    // event Submitted(address indexed sender, uint256 amount, address referral);
 
     // The `amount` of ether was sent to the deposit_contract.deposit function
-    event Unbuffered(uint256 amount);
+    // event Unbuffered(uint256 amount);
 
     // Requested withdrawal of `etherAmount` to `pubkeyHash` on the ETH 2.0 side, `tokenAmount` burned by `sender`,
     // `sentFromBuffer` was sent on the current Ethereum side.
-    event Withdrawal(address indexed sender, uint256 tokenAmount, uint256 sentFromBuffer,
-                     bytes32 indexed pubkeyHash, uint256 etherAmount);
+    /* event Withdrawal(address indexed sender, uint256 tokenAmount, uint256 sentFromBuffer,
+                     bytes32 indexed pubkeyHash, uint256 etherAmount); */
 
 
     // Info functions

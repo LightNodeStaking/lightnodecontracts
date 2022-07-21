@@ -12,7 +12,7 @@ import "./interfaces/IExecutionLayerRewardsVault.sol";
 import "./token/SlETH.sol";
 import "./lib/UnstructuredStorage.sol";
 
-contract LightNode is ILightNode, SlETH, AccessControl {
+contract LightNode is SlETH, AccessControl {
     using UnstructuredStorage for bytes32;
 
     bytes32 constant public PAUSE_ROLE = keccak256("PAUSE_ROLE");
@@ -75,6 +75,38 @@ contract LightNode is ILightNode, SlETH, AccessControl {
     /// @dev Credentials which allows the DAO to withdraw Ether on the 2.0 side
     bytes32 internal constant WITHDRAWAL_CREDENTIALS_POSITION = keccak256("lightnode.Lightnode.withdrawalCredentials");
 
+    event Stopped();
+    event Resumed();
+
+    event StakingPaused();
+    event StakingResumed();
+    event StakingLimitSet(uint256 maxStakeLimit, uint256 stakeLimitIncreasePerBlock);
+    event StakingLimitRemoved();
+
+    event FeeSet(uint16 feeBasisPoints);
+
+    event FeeDistributionSet(uint16 treasuryFeeBasisPoints, uint16 insuranceFeeBasisPoints, uint16 operatorsFeeBasisPoints);
+    // The amount of ETH withdrawn from ExecutionLayerRewardsVault contract to LightNode contract
+    event ELRewardsReceived(uint256 amount);
+    // Percent in basis points of total pooled ether allowed to withdraw from ExecutionLayerRewardsVault per Oracle report
+    event ELRewardsWithdrawalLimitSet(uint256 limitPoints);
+    event WithdrawalCredentialsSet(bytes32 withdrawalCredentials);
+    // The `executionLayerRewardsVault` was set as the execution layer rewards vault for LightNode
+    event ELRewardsVaultSet(address executionLayerRewardsVault);
+
+    // Records a deposit made by a user
+    event Submitted(address indexed sender, uint256 amount, address referral);
+
+    // The `amount` of ether was sent to the deposit_contract.deposit function
+    event Unbuffered(uint256 amount);
+
+    // Requested withdrawal of `etherAmount` to `pubkeyHash` on the ETH 2.0 side, `tokenAmount` burned by `sender`,
+    // `sentFromBuffer` was sent on the current Ethereum side.
+    event Withdrawal(address indexed sender, uint256 tokenAmount, uint256 sentFromBuffer,
+                     bytes32 indexed pubkeyHash, uint256 etherAmount);
+
+    event ProtocolContactsSet(address oracle, address treasury, address insuranceFund);
+
     constructor(
         IDepositContract _depositContract,
         address _oracle,
@@ -101,6 +133,8 @@ contract LightNode is ILightNode, SlETH, AccessControl {
         require(msg.data.length == 0, "NON_EMPTY_DATA");
         _submit(address(0)); // why _submit(0)
     }
+
+    // receive() external payable {}
 
     /**
     * @notice Send funds to the pool with optional _referral parameter
@@ -295,9 +329,8 @@ contract LightNode is ILightNode, SlETH, AccessControl {
             }
         }
 
-        // Don’t mint/distribute any protocol fee on the non-profitable Lido oracle report
+        // Don’t mint/distribute any protocol fee on the non-profitable oracle report
         // (when beacon chain balance delta is zero or negative).
-        // See ADR #3 for details: https://research.lido.fi/t/rewards-distribution-after-the-merge-architecture-decision-record/1535
         if (_beaconBalance > rewardBase) {
             uint256 rewards = _beaconBalance - rewardBase;
             distributeFee(rewards + executionLayerRewards);
@@ -320,7 +353,7 @@ contract LightNode is ILightNode, SlETH, AccessControl {
     }
 
     /**
-    * @notice Returns address of the contract set as LidoExecutionLayerRewardsVault
+    * @notice Returns address of the contract set as ExecutionLayerRewardsVault
     */
     function getELRewardsVault() public view returns (address) {
         return EL_REWARDS_VAULT_POSITION.getStorageAddress();
@@ -486,6 +519,18 @@ contract LightNode is ILightNode, SlETH, AccessControl {
     }
 
     /**
+    * @notice Returns the key values related to Beacon-side
+    * @return depositedValidators - number of deposited validators
+    * @return beaconValidators - number of LightNode's validators visible in the Beacon state, reported by oracles
+    * @return beaconBalance - total amount of Beacon-side Ether (sum of all the balances of LightNode validators)
+    */
+    function getBeaconStat() public view returns (uint256 depositedValidators, uint256 beaconValidators, uint256 beaconBalance) {
+        depositedValidators = DEPOSITED_VALIDATORS_POSITION.getStorageUint256();
+        beaconValidators = BEACON_VALIDATORS_POSITION.getStorageUint256();
+        beaconBalance = BEACON_BALANCE_POSITION.getStorageUint256();
+    }
+
+    /**
     * @notice Returns staking rewards fee rate
     */
     function getFee() public view returns (uint16 feeBasisPoints) {
@@ -524,10 +569,38 @@ contract LightNode is ILightNode, SlETH, AccessControl {
     }
 
     /**
+    * @notice Get total amount of execution layer rewards collected to LightNode contract
+    * @dev Ether got through ExecutionLayerRewardsVault is kept on this contract's balance the same way
+    * as other buffered Ether is kept (until it gets deposited)
+    * @return amount of funds received as execution layer rewards (in wei)
+    */
+    function getTotalELRewardsCollected() external view returns (uint256) {
+        return TOTAL_EL_REWARDS_COLLECTED_POSITION.getStorageUint256();
+    }
+
+    /**
+    * @notice Get limit in basis points to amount of ETH to withdraw per Oracle report
+    * @return limit in basis points to amount of ETH to withdraw per Oracle report
+    */
+    function getELRewardsWithdrawalLimit() external view returns (uint256) {
+        return EL_REWARDS_WITHDRAWAL_LIMIT_POSITION.getStorageUint256();
+    }
+
+    /**
     * @notice Gets deposit contract handle
     */
     function getDepositContract() public view returns (IDepositContract) {
         return IDepositContract(DEPOSIT_CONTRACT_POSITION.getStorageAddress());
+    }
+
+    /**
+    * @notice Get the amount of Ether temporary buffered on this contract balance
+    * @dev Buffered balance is kept on the contract from the moment the funds are received from user
+    * until the moment they are actually sent to the official Deposit contract.
+    * @return amount of buffered funds in wei
+    */
+    function getBufferedEther() external view returns (uint256) {
+        return _getBufferedEther();
     }
 
     /**
@@ -603,6 +676,28 @@ contract LightNode is ILightNode, SlETH, AccessControl {
     */
     function _getUnaccountedEther() internal view returns (uint256) {
         return address(this).balance - _getBufferedEther();
+    }
+
+    /**
+    * @dev Calculates and returns the total base balance (multiple of 32) of validators in transient state,
+    *      i.e. submitted to the official Deposit contract but not yet visible in the beacon state.
+    * @return transient balance in wei (1e-18 Ether)
+    */
+    function _getTransientBalance() internal view returns (uint256) {
+        uint256 depositedValidators = DEPOSITED_VALIDATORS_POSITION.getStorageUint256();
+        uint256 beaconValidators = BEACON_VALIDATORS_POSITION.getStorageUint256();
+        // beaconValidators can never be less than deposited ones.
+        assert(depositedValidators >= beaconValidators);
+        return (depositedValidators - beaconValidators) * DEPOSIT_SIZE;
+    }
+
+    /**
+    * @dev Gets the total amount of Ether controlled by the system
+    * @return total balance in wei
+    */
+    function _getTotalPooledEther() internal view override returns (uint256) {
+        return _getBufferedEther() + 
+            BEACON_BALANCE_POSITION.getStorageUint256() + _getTransientBalance();
     }
 
     /**
