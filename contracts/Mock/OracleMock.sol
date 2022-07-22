@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "../Oracle/Oracle.sol";
+import "../Oracle.sol";
 
 /**
   * @dev Only for testing purposes!

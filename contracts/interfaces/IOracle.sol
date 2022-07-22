@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "./IStaking.sol";
+import "./ILightNode.sol";
 
 /**
  * @title ETH 2.0 -> ETH oracle
@@ -46,7 +46,7 @@ interface IOracle {
     /**
      * @notice Return the Staking contract address
      */
-    function getLightNode() external view returns (IStaking);
+    function getLightNode() external view returns (ILightNode);
 
     /**
      * @notice Return the number of exactly the same reports needed to finalize the epoch

@@ -10,6 +10,20 @@ import "./interfaces/IBeaconReportReceiver.sol";
 import "./lib/UnstructuredStorage.sol";
 import "./lib/ReportUtils.sol";
 
+/**
+ * @title Implementation of an ETH 2.0 -> ETH oracle
+ *
+ * The goal of the oracle is to inform other parts of the system about balances controlled by the
+ * DAO on the ETH 2.0 side. The balances can go up because of reward accumulation and can go down
+ * because of slashing.
+ *
+ * The timeline is divided into consecutive frames. Every oracle member may push its report once
+ * per frame. When the equal reports reach the configurable 'quorum' value, this frame is
+ * considered finalized and the resulting report is pushed to LghtNode.
+ *
+ * Not all frames may come to a quorum. Oracles may report only to the first epoch of the frame and
+ * only if no quorum is reached for this epoch yet.
+ */
 contract Oracle is IOracle, AccessControl {
     using ReportUtils for uint256;
     using UnstructuredStorage for bytes32;
@@ -21,14 +35,12 @@ contract Oracle is IOracle, AccessControl {
         uint64 genesisTime;
     }
 
-    // Access Control List
+    // Access Control List(ACL)
     bytes32 public constant MANAGE_MEMBERS = keccak256("MANAGE_MEMBERS");
     bytes32 public constant MANAGE_QUORUM = keccak256("MANAGE_QUORUM");
     bytes32 public constant SET_BEACON_SPEC = keccak256("SET_BEACON_SPEC");
-    bytes32 public constant SET_REPORT_BOUNDARIES =
-        keccak256("SET_REPORT_BOUNDARIES");
-    bytes32 public constant SET_BEACON_REPORT_RECEIVER =
-        keccak256("SET_BEACON_REPORT_RECEIVER");
+    bytes32 public constant SET_REPORT_BOUNDARIES = keccak256("SET_REPORT_BOUNDARIES");
+    bytes32 public constant SET_BEACON_REPORT_RECEIVER = keccak256("SET_BEACON_REPORT_RECEIVER");
 
     /// Maximum number of oracle committee members
     uint256 public constant MAX_MEMBERS = 256;
@@ -654,7 +666,7 @@ contract Oracle is IOracle, AccessControl {
     }
 
     /**
-     * @notice Push the given report to Lido and performs accompanying accounting
+     * @notice Push the given report to LightNode and performs accompanying accounting
      * @param _epochId Beacon chain epoch, proven to be >= expected epoch and <= current epoch
      * @param _beaconBalanceEth1 Validators balance in eth1 (18-digit denomination)
      * @param _beaconSpec current beacon specification data
@@ -674,7 +686,7 @@ contract Oracle is IOracle, AccessControl {
         // report to the Node and collect stats
         ILightNode lightNode = getLightNode();
         uint256 prevTotalPooledEther = lightNode.totalSupply();
-        lightNode.pushBeacon(_beaconValidators, _beaconBalanceEth1);
+        lightNode.handleOracleReport(_beaconValidators, _beaconBalanceEth1);
         uint256 postTotalPooledEther = lightNode.totalSupply();
 
         PRE_COMPLETED_TOTAL_POOLED_ETHER_POSITION.setStorageUint256(
@@ -728,7 +740,7 @@ contract Oracle is IOracle, AccessControl {
     }
 
     /**
-     * @notice Performs logical consistency check of the Lido changes as the result of reports push
+     * @notice Performs logical consistency check of the LightNode changes as the result of reports push
      * @dev To make oracles less dangerous, we limit rewards report by 10% _annual_ increase and 5%
      * _instant_ decrease in stake, with both values configurable by the governance in case of
      * extremely unusual circumstances.

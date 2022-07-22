@@ -4,7 +4,8 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
-import "./interfaces/IStaking.sol";
+
+import "./interfaces/ILightNode.sol";
 
 /**
  * @title A vault for temporary storage of execution layer rewards (MEV and tx priority fee)
@@ -76,7 +77,7 @@ contract ExecutionLayerRewardsVault {
         uint256 balance = address(this).balance;
         amount = (balance > _maxAmount) ? _maxAmount : balance;
         if (amount > 0) {
-            IStaking(STAKING).receiveELRewards{value: amount}();
+            ILightNode(STAKING).receiveELRewards{value: amount}();
         }
         return amount;
     }

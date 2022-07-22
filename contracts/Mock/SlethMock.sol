@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "../token/SLETH.sol";
+import "../token/SlETH.sol";
 
-contract SlethMock is SLETH {
+contract SlethMock is SlETH {
     address public tokenAccount;
 
     uint256 public totalPooledEther;
@@ -28,7 +28,7 @@ contract SlethMock is SLETH {
         public
         returns (uint256 newTotalShares)
     {
-        newTotalShares = _mint(_to, _sharesAmount);
+        newTotalShares = _mintShares(_to, _sharesAmount);
         //_emitTransferAfterMintingShares(_to, _sharesAmount);
     }
 
@@ -36,6 +36,6 @@ contract SlethMock is SLETH {
         public
         returns (uint256 newTotalShares)
     {
-        return _burn(_account, _sharesAmount);
+        return _burnShares(_account, _sharesAmount);
     }
 }
