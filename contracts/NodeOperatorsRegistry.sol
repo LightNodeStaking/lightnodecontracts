@@ -9,7 +9,7 @@ import "solidity-bytes-utils/contracts/BytesLib.sol";
 import "./interfaces/INodeOperatorsRegistry.sol";
 import "./lib/UnstructuredStorage.sol";
 import "./lib/MemoryUtils.sol";
-import "./Helper/ArrConversion.sol";
+import "./helper/ArrConversion.sol";
 
 contract NodeOperatorsRegistry is INodeOperatorsRegistry, AccessControl, ArrConversion {
     using SafeMath for uint256;
