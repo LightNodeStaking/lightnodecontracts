@@ -13,4 +13,6 @@ interface ISlETH is IERC20 {
         external
         view
         returns (uint256);
+
+    function submit(address _referral) external payable returns (uint256);
 }
