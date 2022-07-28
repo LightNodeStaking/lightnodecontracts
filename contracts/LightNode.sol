@@ -106,15 +106,14 @@ contract LightNode is SlETH, AccessControl {
                      bytes32 indexed pubkeyHash, uint256 etherAmount);
 
     event ProtocolContactsSet(address oracle, address treasury, address insuranceFund);
+    event NodeOperatorsSet(address operators);
 
     constructor(
         IDepositContract _depositContract,
         address _oracle,
-        INodeOperatorsRegistry _operators,
         address _treasury,
         address _insuranceFund
     ) {
-        NODE_OPERATORS_REGISTRY_POSITION.setStorageAddress(address(_operators));
         DEPOSIT_CONTRACT_POSITION.setStorageAddress(address(_depositContract));
 
         _setProtocolContracts(_oracle, _treasury, _insuranceFund);
@@ -143,6 +142,13 @@ contract LightNode is SlETH, AccessControl {
     */
     function submit(address _referral) external payable returns (uint256) {
         return _submit(_referral);
+    }
+
+    function setNodeOperatorsRegistry(address _operators) external onlyRole(MANAGE_PROTOCOL_CONTRACTS_ROLE) {
+        require(_operators != address(0), "Operators_zero_address");
+        NODE_OPERATORS_REGISTRY_POSITION.setStorageAddress(_operators);
+
+        emit NodeOperatorsSet(_operators);
     }
 
     /**
@@ -260,6 +266,7 @@ contract LightNode is SlETH, AccessControl {
     */
     function setWithdrawalCredentials(bytes32 _withdrawalCredentials) external onlyRole(MANAGE_WITHDRAWAL_KEY) {
         WITHDRAWAL_CREDENTIALS_POSITION.setStorageBytes32(_withdrawalCredentials);
+        require(address(getOperators()) != address(0), "NodeOperatorsRegistry is not set");
         getOperators().trimUnusedKeys();
 
         emit WithdrawalCredentialsSet(_withdrawalCredentials);
@@ -386,6 +393,7 @@ contract LightNode is SlETH, AccessControl {
     * @return actually deposited Ether amount
     */
     function _ETH2Deposit(uint256 _numDeposits) internal returns (uint256) {
+        require(address(getOperators()) != address(0), "NodeOperatorsRegistry is not set");
         (bytes memory pubkeys, bytes memory signatures) = getOperators().assignNextSigningKeys(_numDeposits);
 
         if (pubkeys.length == 0) {
@@ -609,6 +617,7 @@ contract LightNode is SlETH, AccessControl {
     *  @return distributed Actual amount of shares that was transferred to node operators as a reward
     */
     function _distributeNodeOperatorsReward(uint256 _sharesToDistribute) internal returns (uint256 distributed) {
+        require(address(getOperators()) != address(0), "NodeOperatorsRegistry is not set");
         (address[] memory recipients, uint256[] memory shares) = getOperators().getRewardsDistribution(_sharesToDistribute);
 
         assert(recipients.length == shares.length);
