@@ -6,7 +6,9 @@ require("dotenv").config();
 
 const {
   ETHERSCAN_API_KEY, 
-  PRIVATE_KEY,
+  DEPLOYER_PRIVATE_KEY,
+  TREASURY_PRIVATE_KEY,
+  INSURANCE_FUND_PRIVATE_KEY,
   MAINNET_URL,
   GOERLI_URL,
   REPORT_GAS
@@ -48,7 +50,7 @@ module.exports = {
     goerli: {
       url: GOERLI_URL || "",
       accounts:
-        PRIVATE_KEY !== undefined ? [PRIVATE_KEY] : [],
+        [DEPLOYER_PRIVATE_KEY, TREASURY_PRIVATE_KEY, INSURANCE_FUND_PRIVATE_KEY]
     },
   },
   gasReporter: {
