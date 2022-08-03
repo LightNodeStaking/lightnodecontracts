@@ -51,7 +51,7 @@ async function main() {
 
   console.log("ExecutionLayerRewardsVault deployed at:", executionLayerRewardsVault.address); */
   
-  const nodeOperatorsRegistryAddr = "0x9962eE09d104B338f97F07Ab32F579a94e174025";
+  /* const nodeOperatorsRegistryAddr = "0x9962eE09d104B338f97F07Ab32F579a94e174025";
   const networkId = 5; // goerli
   const maxDepositsPerBlock = 150;
   const minDepositBlockDistance = 25;
@@ -69,7 +69,13 @@ async function main() {
   );
   await depositSecurityModule.deployed();
 
-  console.log("DepositSecurityModule deployed at:", depositSecurityModule.address);
+  console.log("DepositSecurityModule deployed at:", depositSecurityModule.address); */
+
+  const WslETH = await hre.ethers.getContractFactory("WslETH");
+  const wslETH = await WslETH.deploy(lightNodeAddr);
+  await wslETH.deployed();
+
+  console.log("WslETH deployed at:", wslETH.address);
 }
 
 // We recommend this pattern to be able to use async/await everywhere
