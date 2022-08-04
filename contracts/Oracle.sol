@@ -114,9 +114,20 @@ contract Oracle is IOracle, AccessControl {
     uint256[] private currentReportVariants; // slot 1: reporting storage
 
     constructor() {
+        QUORUM_POSITION.setStorageUint256(1);
+        emit QuorumChanged(1);
+
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
-    
+
+    /**
+     * @notice set the address of LightNode contract
+     */
+    function setLightNode(address _lightNode) external {
+        LIGHT_NODE_POSITION.setStorageAddress(_lightNode);
+        emit LightNodeSet(_lightNode);
+    }
+
     /**
      * @notice Return the LightNode contract address
      */
@@ -685,6 +696,7 @@ contract Oracle is IOracle, AccessControl {
 
         // report to the Node and collect stats
         ILightNode lightNode = getLightNode();
+        require(address(lightNode) != address(0), "staking address is not set yet");
         uint256 prevTotalPooledEther = lightNode.totalSupply();
         lightNode.handleOracleReport(_beaconValidators, _beaconBalanceEth1);
         uint256 postTotalPooledEther = lightNode.totalSupply();

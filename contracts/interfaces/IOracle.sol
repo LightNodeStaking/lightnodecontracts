@@ -42,7 +42,8 @@ interface IOracle {
         uint256 totalShares
     );
     event ContractVersionSet(uint256 version);
-
+    event LightNodeSet(address lightNode);
+    
     /**
      * @notice Return the Staking contract address
      */
