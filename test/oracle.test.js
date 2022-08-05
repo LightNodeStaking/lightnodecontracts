@@ -6,20 +6,34 @@ const GENESIS_TIME = 1606824000
 const EPOCH_LENGTH = 32 * 12
 
 describe("Oracle Test Suite", () => {
-    let oracle;
+    let oracle, lightNode;
     let deployer, voting, user1, user2, user3, user4;
     let table = new Table({
         head: ['Contracts', 'contract addresses'],
         colWidths: ['auto', 'auto']
     });
 
+    const depositContractAddr = "0x07b39F4fDE4A38bACe212b546dAc87C58DfE3fDC";
+
     before(async () => {
-        [deployer, voting, user1, user2, user3, user4] = await ethers.getSigners();
+        [deployer, voting, user1, user2, user3, user4, treasury, insuranceFund, manager] = await ethers.getSigners();
         const OracleFactory = await ethers.getContractFactory("OracleMock");
         oracle = await OracleFactory.deploy();
         await oracle.deployed();
 
+        const LightNode = await ethers.getContractFactory("LightNode");
+        lightNode = await LightNode.deploy(
+            depositContractAddr,
+            oracle.address,
+            treasury.address,
+            insuranceFund.address
+        );
+        
+        // initialize LightNode contract address
+        await oracle.setLightNode(lightNode.address);
+
         table.push(["Oracle Address is: ", oracle.address]);
+        table.push(["LightNode Address is: ", lightNode.address]);
         console.log(table.toString());
         // 1000 and 500 stand for 10% yearly increase, 5% moment decrease
         // await oracle.initialize_v2(1000, 500);

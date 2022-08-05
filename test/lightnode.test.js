@@ -2,7 +2,7 @@ const { expect } = require("chai");
 const { ethers } = require("hardhat");
 
 describe("LightNode Test Suite", () => {
-    let lightNode, oracle, nodeOperatorsRegistry;
+    let lightNode, oracle, nodeOperatorsRegistry, elRewardsVault;
 
     const depositContractAddr = "0x07b39F4fDE4A38bACe212b546dAc87C58DfE3fDC";
 
@@ -28,6 +28,13 @@ describe("LightNode Test Suite", () => {
         const NodeOperatorsRegistry = await ethers.getContractFactory("NodeOperatorsRegistry");
         nodeOperatorsRegistry = await NodeOperatorsRegistry.deploy(lightNode.address);
         await nodeOperatorsRegistry.deployed();
+
+        const ExecutionLayerRewardsVault = await ethers.getContractFactory("ExecutionLayerRewardsVault");
+        elRewardsVault = await ExecutionLayerRewardsVault.deploy(
+            lightNode.address,
+            treasury.address
+        );
+        await elRewardsVault.deployed();
     });
 
     describe("set NodeOperatorsRegistry", () => {
@@ -60,5 +67,21 @@ describe("LightNode Test Suite", () => {
 
     it("getDepositContract()", async() => {
         expect(await lightNode.getDepositContract()).to.equal(depositContractAddr);
+    });
+
+    describe("set ExecutionLayerRewardsVault", () => {
+        it("reverts if the caller does not have right role", async() => {
+            await expect(
+                lightNode.setELRewardsVault(elRewardsVault.address)
+            ).to.be.reverted;
+        });
+
+        it("setELRewardsVault()", async() => {
+            const elRewardsVaultRole = await lightNode.SET_EL_REWARDS_VAULT_ROLE();
+            await lightNode.grantRole(elRewardsVaultRole, manager.address);
+            expect(
+                await lightNode.connect(manager).setELRewardsVault(elRewardsVault.address)
+            ).to.emit(lightNode, "ELRewardsVaultSet").withArgs(elRewardsVault.address);
+        });
     });
 });
