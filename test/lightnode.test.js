@@ -3,7 +3,8 @@ const { ethers } = require("hardhat");
 
 describe("LightNode Test Suite", () => {
     let lightNode, oracle, nodeOperatorsRegistry, elRewardsVault;
-
+    let deployer, treasury, insuranceFund, manager;
+    
     const depositContractAddr = "0x07b39F4fDE4A38bACe212b546dAc87C58DfE3fDC";
 
     before(async() => {
