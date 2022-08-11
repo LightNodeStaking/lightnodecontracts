@@ -10,7 +10,7 @@ import "./interfaces/INodeOperatorsRegistry.sol";
 import "./lib/UnstructuredStorage.sol";
 import "./lib/MemoryUtils.sol";
 import "./helper/ArrConversion.sol";
-
+import "hardhat/console.sol";
 contract NodeOperatorsRegistry is INodeOperatorsRegistry, AccessControl, ArrConversion {
     using SafeMath for uint256;
     using UnstructuredStorage for bytes32;
@@ -79,6 +79,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AccessControl, ArrConv
     }
 
     modifier operatorExists( uint256 _id){
+        console.log(getNodeOperatorsCount());
         require(_id < getNodeOperatorsCount(), "NODE_OPERATOT_DOESN'T EXTIST");
         _;
     }
@@ -97,7 +98,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AccessControl, ArrConv
     ) external onlyRole(ADD_NODE_OPERATOR_ROLE) validAddress(_rewardAdd) override returns(uint256 id) {
         id = getNodeOperatorsCount();
         TOTAL_OPERATORS_COUNT_POSITION.setStorageUint256(id + 1);
-
+        console.log('here');
         NodeOperator storage operator = operators[id];
         // update active operator count
         uint256 activeOperator = getActiveNodeOperatorsCount();
