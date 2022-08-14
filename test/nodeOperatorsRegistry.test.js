@@ -49,12 +49,28 @@ describe("NodeOperatorsRegistry Test Suite", () => {
         });
     });
 
-    it("setNodeOperatorActive", async() => {
-        const setNodeOprActiveRole = await nodeOperatorsRegistry.SET_NODE_OPERATOR_ACTIVE_ROLE();
-        await nodeOperatorsRegistry.grantRole(setNodeOprActiveRole, manager.address);
+    describe("set node operator", () => { 
+        let setNodeOprRole;
 
-        expect(
-            await nodeOperatorsRegistry.connect(manager).setNodeOperatorActive(0, true)
-        ).to.emit(nodeOperatorsRegistry, "NodeOperatorActiveSet").withArgs(0, true);
+        it("setNodeOperatorActive", async() => {
+            setNodeOprRole = await nodeOperatorsRegistry.SET_NODE_OPERATOR_ROLE();
+            await nodeOperatorsRegistry.grantRole(setNodeOprRole, manager.address);
+
+            expect(
+                await nodeOperatorsRegistry.connect(manager).setNodeOperatorActive(0, true)
+            ).to.emit(nodeOperatorsRegistry, "NodeOperatorActiveSet").withArgs(0, true);
+        });
+
+        it("setNodeOperatorName", async() => {
+            expect(
+                await nodeOperatorsRegistry.connect(manager).setNodeOperatorActive(0, "change opr name")
+            ).to.emit(nodeOperatorsRegistry, "NodeOperatorNameSet").withArgs(0, "change opr name");
+        });
+
+        it("setNodeOperatorRewardAddress", async() => {
+            expect(
+                await nodeOperatorsRegistry.connect(manager).setNodeOperatorRewardAddress(0, rewardAddr.address)
+            ).to.emit(nodeOperatorsRegistry, "NodeOperatorRewardAddressSet").withArgs(0, rewardAddr.address);
+        });
     });
 });
