@@ -10,7 +10,7 @@ import "./interfaces/INodeOperatorsRegistry.sol";
 import "./lib/UnstructuredStorage.sol";
 import "./lib/MemoryUtils.sol";
 import "./helper/ArrConversion.sol";
-import "hardhat/console.sol";
+
 contract NodeOperatorsRegistry is INodeOperatorsRegistry, AccessControl, ArrConversion {
     using SafeMath for uint256;
     using UnstructuredStorage for bytes32;
@@ -18,10 +18,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AccessControl, ArrConv
     // Access Control List
     bytes32 constant public MANAGE_SIGNING_KEYS = keccak256("MANAGE_SIGNING_KEYS");
     bytes32 constant public ADD_NODE_OPERATOR_ROLE = keccak256("ADD_NODE_OPERATOR_ROLE");
-    bytes32 constant public SET_NODE_OPERATOR_ACTIVE_ROLE = keccak256("SET_NODE_OPERATOR_ACTIVE_ROLE");
-    bytes32 constant public SET_NODE_OPERATOR_NAME_ROLE = keccak256("SET_NODE_OPERATOR_NAME_ROLE");
-    bytes32 constant public SET_NODE_OPERATOR_ADDRESS_ROLE = keccak256("SET_NODE_OPERATOR_ADDRESS_ROLE");
-    bytes32 constant public SET_NODE_OPERATOR_LIMIT_ROLE = keccak256("SET_NODE_OPERATOR_LIMIT_ROLE");
+    bytes32 constant public SET_NODE_OPERATOR_ROLE = keccak256("SET_NODE_OPERATOR_ROLE");
     bytes32 constant public REPORT_STOPPED_VALIDATORS_ROLE = keccak256("REPORT_STOPPED_VALIDATORS_ROLE");
 
     uint256 constant public PUBKEY_LENGTH = 48;
@@ -79,7 +76,6 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AccessControl, ArrConv
     }
 
     modifier operatorExists( uint256 _id){
-        console.log(getNodeOperatorsCount());
         require(_id < getNodeOperatorsCount(), "NODE_OPERATOT_DOESN'T EXTIST");
         _;
     }
@@ -98,7 +94,6 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AccessControl, ArrConv
     ) external onlyRole(ADD_NODE_OPERATOR_ROLE) validAddress(_rewardAdd) override returns(uint256 id) {
         id = getNodeOperatorsCount();
         TOTAL_OPERATORS_COUNT_POSITION.setStorageUint256(id + 1);
-        console.log('here');
         NodeOperator storage operator = operators[id];
         // update active operator count
         uint256 activeOperator = getActiveNodeOperatorsCount();
@@ -114,7 +109,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AccessControl, ArrConv
         return id;
     }
 
-    function setNodeOperatorActive(uint _id, bool _active) external onlyRole(SET_NODE_OPERATOR_ACTIVE_ROLE) override operatorExists(_id){
+    function setNodeOperatorActive(uint _id, bool _active) external onlyRole(SET_NODE_OPERATOR_ROLE) override operatorExists(_id){
         _increaseKeysOpIndex();
 
         if(operators[_id].active != _active){
@@ -134,7 +129,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AccessControl, ArrConv
     * @notice Change human-readable name of the node operator #`_id` to `_name`
     */
     function setNodeOperatorName(uint256 _id, string memory _name) external
-        onlyRole(SET_NODE_OPERATOR_NAME_ROLE)
+        onlyRole(SET_NODE_OPERATOR_ROLE)
         operatorExists(_id) override
     {
         operators[_id].name = _name;
@@ -145,7 +140,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AccessControl, ArrConv
     * @notice Change reward address of the node operator #`_id` to `_rewardAddress`
     */
     function setNodeOperatorRewardAddress(uint256 _id, address _rewardAddress) external
-        onlyRole(SET_NODE_OPERATOR_ADDRESS_ROLE)
+        onlyRole(SET_NODE_OPERATOR_ROLE)
         operatorExists(_id)
         validAddress(_rewardAddress) override
     {
@@ -414,7 +409,7 @@ contract NodeOperatorsRegistry is INodeOperatorsRegistry, AccessControl, ArrConv
     * @notice Set the maximum number of validators to stake for the node operator #`_id` to `_stakingLimit`
     */
     function setNodeOperatorStakingLimit(uint256 _id, uint64 _stakingLimit) external 
-        onlyRole(SET_NODE_OPERATOR_LIMIT_ROLE)
+        onlyRole(SET_NODE_OPERATOR_ROLE)
         operatorExists(_id) override
     {
         _increaseKeysOpIndex();
