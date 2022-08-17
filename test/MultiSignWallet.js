@@ -23,7 +23,7 @@ describe("Multi- Signature Wallet Testing", function () {
         const contractWallet = await hre.ethers.getContractFactory("MultiSignWallet");
         multiSignWallet = await contractWallet.connect(ownerAcc1).deploy(owners, required);
 
-        const mockToken = await hre.ethers.getContractFactory("Mocktoken");
+        const mockToken = await hre.ethers.getContractFactory("MockToken");
         tokenMock = await mockToken.connect(mockCoin).deploy(mockCoin.address);
 
         let tokenvalue = ethers.utils.parseEther('1000')
