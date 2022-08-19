@@ -221,9 +221,9 @@ interface ILightNode {
 
     /**
       * @notice Adds eth to the pool
-      * @return StETH Amount of StETH generated
+      * @return SlETH Amount of SlETH generated
       */
-    function submit(address _referral) external payable returns (uint256 StETH);
+    function submit(address _referral) external payable returns (uint256 SlETH);
 
     // Records a deposit made by a user
     // event Submitted(address indexed sender, uint256 amount, address referral);
@@ -256,4 +256,38 @@ interface ILightNode {
       * @return beaconBalance - total amount of Beacon-side Ether (sum of all the balances of LightNode validators)
       */
     function getBeaconStat() external view returns (uint256 depositedValidators, uint256 beaconValidators, uint256 beaconBalance);
+
+    /**
+      * @notice Get shares amount by the provided slETH amount
+      * @param _pooledEthAmount slETH amount
+      * @dev dual to `getPooledEthByShares`.
+      */
+    function getSharesByPooledEth(uint256 _pooledEthAmount) external view returns (uint256);
+
+    /**
+      * @notice Gets authorized oracle address
+      * @return address of oracle contract.
+      */
+    function getOracle() external view returns (address);
+
+    /**
+      * @notice Get slETH amount by the provided shares amount
+      * @param _sharesAmount shares amount
+      * @dev dual to `getSharesByPooledEth`.
+      */
+    function getPooledEthByShares(uint256 _sharesAmount) external view returns (uint256);
+
+    /**
+      * @notice Destroys given amount of shares from account's holdings
+      * @param _account address of the shares holder
+      * @param _sharesAmount shares amount to burn
+      * @dev incurs slETH token rebase by decreasing the total amount of shares.
+      */
+    function burnShares(address _account, uint256 _sharesAmount) external returns (uint256 newTotalShares);
+
+    /**
+      * @notice Get shares amount of the provided account
+      * @param _account provided account address.
+      */
+    function sharesOf(address _account) external view returns (uint256);
 }
