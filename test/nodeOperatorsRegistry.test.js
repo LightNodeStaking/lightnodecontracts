@@ -63,7 +63,7 @@ describe("NodeOperatorsRegistry Test Suite", () => {
 
         it("setNodeOperatorName", async() => {
             expect(
-                await nodeOperatorsRegistry.connect(manager).setNodeOperatorActive(0, "change opr name")
+                await nodeOperatorsRegistry.connect(manager).setNodeOperatorName(0, "change opr name")
             ).to.emit(nodeOperatorsRegistry, "NodeOperatorNameSet").withArgs(0, "change opr name");
         });
 
