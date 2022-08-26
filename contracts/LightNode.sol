@@ -133,7 +133,9 @@ contract LightNode is SlETH, AccessControl {
         _submit(address(0)); // why _submit(0)
     }
 
-    // receive() external payable {}
+    receive() external payable {
+        _submit(address(0));
+    }
 
     /**
     * @notice Send funds to the pool with optional _referral parameter
