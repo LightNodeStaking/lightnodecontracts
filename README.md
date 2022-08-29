@@ -14,11 +14,11 @@ LightNode also acts as an ERC20 token which represents staked ether, slETH. Toke
 
 #### NodeOperatorRegistry
 
-Node Registry act as validators on the Beacon chain for the benefit of the protocol. We can or DAO can selects node operators and adds their addresses to the NodeOperatorsRegistry contract. Authorized operators have to generate a set of keys for the validation and also provide them with the smart contract. As Ether is received from users, it is distributed in chunks of 32 Ether between all active Node Operators. The contract contains a list of operators, their keys, and the logic for distributing rewards between them. We can deactivate misbehaving operators when reported.
+Node Registry acts as validators on the Beacon chain for the benefit of the protocol. We can or DAO can select node operators and add their addresses to the NodeOperatorsRegistry contract. Authorized operators have to generate a set of keys for the validation and also provide them with the smart contract. As Ether is received from users, it is distributed in chunks of 32 Ether between all active Node Operators. The contract contains a list of operators, their keys, and the logic for distributing rewards between them. We can deactivate misbehaving operators when reported.
 
 #### Oracle
 
-Oracle is a contract where oracles send addresses' balances controlled on the ETH 2.0 side. Reward accumulation and can go down due to slashing and staking penalties. Oracles are assigned by the devs or DAO.
+Oracle is a contract where oracles send addresses' balances controlled on the ETH 2.0 side. Reward accumulation can go down due to slashing and staking penalties. Oracles are assigned by the devs or DAO.
 
 #### slETH
 
