@@ -766,7 +766,6 @@ contract LightNode is SlETH, AccessControl {
         }
 
         _mintShares(msg.sender, sharesAmount);
-
         BUFFERED_ETHER_POSITION.setStorageUint256(_getBufferedEther() + msg.value);
         emit Submitted(msg.sender, msg.value, _referral);
 
