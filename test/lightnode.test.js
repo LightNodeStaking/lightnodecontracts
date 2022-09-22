@@ -1,12 +1,16 @@
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
 
+const pad = (hex, bytesLength) => {
+    const absentZeroes = bytesLength * 2 + 2 - hex.length
+    if (absentZeroes > 0) hex = '0x' + '0'.repeat(absentZeroes) + hex.substr(2)
+    return hex
+}
+
 describe("LightNode Test Suite", () => {
-    let lightNode, oracle, nodeOperatorsRegistry, elRewardsVault;
+    let lightNode, slETH, oracle, depositContract, nodeOperatorsRegistry, elRewardsVault;
     let deployer, treasury, insuranceFund, manager, depositor;
     let user1, user2, user3, user4;
-    
-    const depositContractAddr = "0x07b39F4fDE4A38bACe212b546dAc87C58DfE3fDC";
 
     before(async() => {
         [deployer, treasury, insuranceFund, manager, depositor, user1, user2, user3, user4] = await ethers.getSigners();
@@ -15,9 +19,13 @@ describe("LightNode Test Suite", () => {
         oracle = await OracleFactory.deploy();
         await oracle.deployed();
 
+        const DepositContract = await ethers.getContractFactory("DepositContract");
+        depositContract = await DepositContract.deploy();
+        await depositContract.deployed();
+
         const LightNode = await ethers.getContractFactory("LightNode");
         lightNode = await LightNode.deploy(
-            depositContractAddr,
+            depositContract.address,
             oracle.address,
             treasury.address,
             insuranceFund.address
@@ -26,6 +34,8 @@ describe("LightNode Test Suite", () => {
         await lightNode.deployed();
 
         console.log("LightNode deployed at ", lightNode.address);
+        
+        slETH = lightNode;
 
         const NodeOperatorsRegistry = await ethers.getContractFactory("NodeOperatorsRegistry");
         nodeOperatorsRegistry = await NodeOperatorsRegistry.deploy(lightNode.address);
@@ -60,7 +70,7 @@ describe("LightNode Test Suite", () => {
     });
 
     it("getDepositContract()", async() => {
-        expect(await lightNode.getDepositContract()).to.equal(depositContractAddr);
+        expect(await lightNode.getDepositContract()).to.equal(depositContract.address);
     });
 
     it("set ExecutionLayerRewardsVault", async () => {
@@ -75,11 +85,20 @@ describe("LightNode Test Suite", () => {
         const depositRole = await lightNode.DEPOSIT_ROLE();
         await lightNode.grantRole(depositRole, depositor.address);
 
+        const manageOprRole = await nodeOperatorsRegistry.MANAGE_OPERATOR_ROLE();
+        await nodeOperatorsRegistry.grantRole(manageOprRole, manager.address);
+        await nodeOperatorsRegistry.connect(manager).addNodeOperator("1", user4.address);
+        await nodeOperatorsRegistry.connect(manager).setNodeOperatorStakingLimit(0, 100000000);
+
+        const manageWithdrawal = await lightNode.MANAGE_WITHDRAWAL_KEY();
+        await lightNode.grantRole(manageWithdrawal, manager.address);
+        await lightNode.connect(manager).setWithdrawalCredentials(pad('0x0202', 32));
+        
         const manageSigningKeys = await nodeOperatorsRegistry.MANAGE_SIGNING_KEYS();
         await nodeOperatorsRegistry.grantRole(manageSigningKeys, manager.address);
 
         await nodeOperatorsRegistry
-            .connect(manager).addSigningKeys(0, 1, "0x010203", "0x01");
+            .connect(manager).addSigningKeys(0, 1, pad("0x010203", 48), pad("0x01", 96));
 
         // send +1 ETH
         await user1.sendTransaction({
@@ -128,7 +147,12 @@ describe("LightNode Test Suite", () => {
         stat = await lightNode.getBeaconStat();
         expect(stat.depositedValidators).to.equal(1);
         expect(stat.beaconBalance).to.equal(0);
-        expect(await lightNode.getBufferedEther()).to.equal(ethers.utils.parseEther("33"));
+        expect(await lightNode.getBufferedEther()).to.equal(ethers.utils.parseEther("1"));
         expect(await lightNode.getTotalPooledEther()).to.equal(ethers.utils.parseEther("33"));
+
+        expect(await slETH.balanceOf(user1.address)).to.equal(ethers.utils.parseUnits("9", 18)); // 1+8 ETH
+        expect(await slETH.balanceOf(user2.address)).to.equal(ethers.utils.parseUnits("10", 18)); // 2+8 ETH
+        expect(await slETH.balanceOf(user3.address)).to.equal(ethers.utils.parseUnits("8", 18));
+        expect(await slETH.balanceOf(user4.address)).to.equal(ethers.utils.parseUnits("6", 18));
     });
 });
