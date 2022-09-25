@@ -58,7 +58,6 @@ contract DepositSecurityModule {
     bool internal paused;
     uint256 internal lastDepositBlock;
 
-
     constructor(
         address _lightNode,
         address _depositContract,
@@ -117,7 +116,6 @@ contract DepositSecurityModule {
         emit OwnerChanged(newValue);
     }
 
-
     /**
      * Returns NodeOperatorsRegistry contract address.
      */
@@ -136,7 +134,6 @@ contract DepositSecurityModule {
         nodeOperatorsRegistry = newValue;
         emit NodeOperatorsRegistryChanged(newValue);
     }
-
 
     /**
      * Returns current `pauseIntentValidityPeriodBlocks` contract parameter (see `pauseDeposits`).
@@ -158,7 +155,6 @@ contract DepositSecurityModule {
         emit PauseIntentValidityPeriodBlocksChanged(newValue);
     }
 
-
     /**
      * Returns `maxDepositsPerBlock` (see `depositBufferedEther`).
      */
@@ -177,7 +173,6 @@ contract DepositSecurityModule {
         maxDepositsPerBlock = newValue;
         emit MaxDepositsChanged(newValue);
     }
-
 
     /**
      * Returns `minDepositBlockDistance`  (see `depositBufferedEther`).
@@ -201,7 +196,6 @@ contract DepositSecurityModule {
         }
     }
 
-
     /**
      * Returns number of valid guardian signatures required to vet (depositRoot, keysOpIndex) pair.
      */
@@ -218,7 +212,6 @@ contract DepositSecurityModule {
         quorum = newValue;
         emit GuardianQuorumChanged(newValue);
     }
-
 
     /**
      * Returns guardian committee member list.
@@ -307,7 +300,6 @@ contract DepositSecurityModule {
         emit GuardianRemoved(addr);
     }
 
-
     /**
      * Returns whether deposits were paused.
      */
@@ -369,14 +361,12 @@ contract DepositSecurityModule {
         }
     }
 
-
     /**
      * Returns the last block that contains a deposit performed via this security module.
      */
     function getLastDepositBlock() external view returns (uint256) {
         return lastDepositBlock;
     }
-
 
     /**
      * Sets `lastDepositBlock`. Only callable by the owner.
@@ -394,7 +384,6 @@ contract DepositSecurityModule {
     function canDeposit() external view returns (bool) {
         return !paused && quorum > 0 && block.number - lastDepositBlock >= minDepositBlockDistance;
     }
-
 
     /**
      * Calls LightNode.depositBufferedEther(maxDepositsPerBlock).
@@ -442,7 +431,6 @@ contract DepositSecurityModule {
         ILightNode(LIGHTNODE).depositBufferedEther(maxDepositsPerBlock);
         lastDepositBlock = block.number;
     }
-
 
     function _verifySignatures(
         bytes32 depositRoot,
